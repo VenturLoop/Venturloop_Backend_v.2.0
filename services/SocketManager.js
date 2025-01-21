@@ -7,11 +7,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const serviceAccountPath = path.join(
-  __dirname,
-  "/push-notification-33d0f-firebase-adminsdk-fbsvc-6c4075929f.json"
-);
+// Use the correct path for the Render secret file
+const serviceAccountPath = "/etc/secrets/push-notification-33d0f-firebase-adminsdk-fbsvc-6c4075929f.json";
 
 // Check if the file exists before initializing Firebase
 if (!fs.existsSync(serviceAccountPath)) {
