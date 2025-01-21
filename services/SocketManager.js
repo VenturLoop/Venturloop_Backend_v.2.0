@@ -10,7 +10,7 @@ import fs from "fs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serviceAccountPath = path.join(
   __dirname,
-  "/etc/secrets/push-notification-33d0f-firebase-adminsdk-fbsvc-6c4075929f.json"
+  "/push-notification-33d0f-firebase-adminsdk-fbsvc-6c4075929f.json"
 );
 
 // Check if the file exists before initializing Firebase
