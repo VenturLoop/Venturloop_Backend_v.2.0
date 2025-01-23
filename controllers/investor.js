@@ -18,23 +18,16 @@ export const uploadInvestorProfile = async (req, res) => {
       contactLink,
     } = req.body;
 
-    // Required fields
+    // Required fields validation
     const requiredFields = {
       name,
       website,
       image,
       description,
       geography,
-      investmentStages,
-      businessModel,
-      investorType,
-      sectorInterested,
-      checkSize,
-      headquarter,
       contactLink,
     };
 
-    // Check for missing fields
     const missingFields = Object.keys(requiredFields).filter(
       (field) => !requiredFields[field]
     );
@@ -63,7 +56,7 @@ export const uploadInvestorProfile = async (req, res) => {
       }
     }
 
-    // Create a new Investor document
+    // Create a new investor document
     const newInvestor = new Investor({
       name,
       website,
@@ -80,10 +73,9 @@ export const uploadInvestorProfile = async (req, res) => {
       contactLink,
     });
 
-    // Save the document to the database
+    // Save to the database
     await newInvestor.save();
 
-    // Respond with success
     return res.status(201).json({
       success: true,
       message: "Investor profile uploaded successfully.",
