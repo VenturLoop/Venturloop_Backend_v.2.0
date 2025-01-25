@@ -149,13 +149,21 @@ export const updateUserProfileDetails = async (req, res) => {
       otherWebsiteUrls,
     } = req.body;
 
-    // Find user profile directly instead of relying on `user.profile`
-    const userProfile = await UserProfileModel.findById(userId);
-    if (!userProfile) {
+    // Fetch user and populate profile
+    const user = await UserModel.findById(userId).populate("profile");
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    if (!user.profile) {
       return res
         .status(404)
         .json({ success: false, message: "User profile not found." });
     }
+
+    const userProfile = user.profile;
 
     // Update profile fields conditionally
     Object.assign(userProfile, {
@@ -164,10 +172,8 @@ export const updateUserProfileDetails = async (req, res) => {
       birthday: birthday ?? userProfile.birthday,
       bio: bio ?? userProfile.bio,
       location: location ?? userProfile.location,
-      skillSet: Array.isArray(skillSet) ? skillSet : userProfile.skillSet,
-      industries: Array.isArray(industries)
-        ? industries
-        : userProfile.industries,
+      skillSet: skillSet ?? userProfile.skillSet,
+      industries: industries ?? userProfile.industries,
       priorStartupExperience:
         priorStartupExperience ?? userProfile.priorStartupExperience,
       commitmentLevel: commitmentLevel ?? userProfile.commitmentLevel,
@@ -175,9 +181,7 @@ export const updateUserProfileDetails = async (req, res) => {
       instagramLink: instagramLink ?? userProfile.instagramLink,
       xLink: xLink ?? userProfile.xLink,
       linkedInLink: linkedInLink ?? userProfile.linkedInLink,
-      otherWebsiteUrls: Array.isArray(otherWebsiteUrls)
-        ? otherWebsiteUrls
-        : userProfile.otherWebsiteUrls,
+      otherWebsiteUrls: otherWebsiteUrls ?? userProfile.otherWebsiteUrls,
     });
 
     // Save updated profile
