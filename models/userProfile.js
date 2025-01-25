@@ -15,7 +15,7 @@ const UserProfileSchema = new mongoose.Schema(
 
     // New fields for social media and websites
     instagramLink: { type: String }, // Instagram user link
-      : { type: String }, // X (formerly Twitter) user link
+    xLink : { type: String }, // X (formerly Twitter) user link
     linkedInLink: { type: String }, // LinkedIn user link
     otherWebsiteUrls: { type: [String], default: [] }, // Array of other website URLs
   },
