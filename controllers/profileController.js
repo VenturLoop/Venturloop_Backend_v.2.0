@@ -206,25 +206,24 @@ export const updateName = async (req, res) => {
     const { userId } = req.params; // Get userId from the URL parameters
     const { name } = req.body; // Get name from the request body
 
-    // Find the user by ID
-    const user = await UserModel.findById(userId);
-    if (!user) {
+    // Find the user by ID and update the name
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userId,
+      { name },
+      { new: true } // Return the updated document
+    ).populate("profile"); // Populate the 'profile' field if it exists
+
+    if (!updatedUser) {
       return res.status(404).json({
         success: false,
         message: "User not found.",
       });
     }
 
-    // Update the user's name
-    user.name = name;
-
-    // Save the updated user data
-    const updatedUser = await user.save();
-
     return res.status(200).json({
       success: true,
       message: "User name updated successfully.",
-      data: updatedUser, // Return the updated user object
+      data: updatedUser, // Return the updated user object with populated profile
     });
   } catch (error) {
     console.error("Error updating user name:", error);
