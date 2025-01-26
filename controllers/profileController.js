@@ -450,7 +450,6 @@ export const addEducation = async (req, res) => {
   }
 };
 
-
 // Controller to update education by educationId
 export const updateEducation = async (req, res) => {
   const { userId, educationId } = req.params; // Get userId and educationId from route parameters
@@ -514,7 +513,11 @@ export const getAllEducationByUserId = async (req, res) => {
       { education: 1 } // Select only the education field
     );
 
-    if (!userEducation || !userEducation.education || userEducation.education.length === 0) {
+    if (
+      !userEducation ||
+      !userEducation.education ||
+      userEducation.education.length === 0
+    ) {
       return res.status(404).json({
         success: false,
         message: "No education records found for this user.",
@@ -533,7 +536,6 @@ export const getAllEducationByUserId = async (req, res) => {
     });
   }
 };
-
 
 // Controller to get a specific education record by userId and educationId
 export const getEducationById = async (req, res) => {
@@ -710,16 +712,7 @@ export const addExperience = async (req, res) => {
 
 export const updateExperience = async (req, res) => {
   const { userId, experienceId } = req.params; // Get userId and experienceId from the route parameters
-  const {
-    title,
-    company,
-    startDate,
-    endDate,
-    description,
-    location,
-    skills,
-    companyPhoto,
-  } = req.body; // Get the updated experience details from the request body
+  const { title, startDate, endDate, description, location, skills } = req.body; // Get the updated experience details from the request body
 
   try {
     // Find the user's experience document
@@ -748,13 +741,11 @@ export const updateExperience = async (req, res) => {
     userExperience.experiences[experienceIndex] = {
       ...userExperience.experiences[experienceIndex], // Keep existing values
       title,
-      company,
       startDate,
       endDate,
       description,
       location,
       skills,
-      companyPhoto,
     };
 
     // Save the updated experience document
