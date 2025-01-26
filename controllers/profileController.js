@@ -711,8 +711,9 @@ export const addExperience = async (req, res) => {
 };
 
 export const updateExperience = async (req, res) => {
-  const { userId, experienceId } = req.params; // Get userId and experienceId from the route parameters
-  const { title, startDate, endDate, description, location, skills } = req.body; // Get the updated experience details from the request body
+  const { userId, experienceId } = req.params; // Get userId and experienceId from route parameters
+  const { title, isCurrentlyWorking, startDate, endDate, description } =
+    req.body; // Only allow updates to these fields
 
   try {
     // Find the user's experience document
@@ -737,16 +738,14 @@ export const updateExperience = async (req, res) => {
       });
     }
 
-    // Update the experience
-    userExperience.experiences[experienceIndex] = {
-      ...userExperience.experiences[experienceIndex], // Keep existing values
-      title,
-      startDate,
-      endDate,
-      description,
-      location,
-      skills,
-    };
+    // Update only the allowed fields
+    const experience = userExperience.experiences[experienceIndex];
+    experience.title = title ?? experience.title;
+    experience.isCurrentlyWorking =
+      isCurrentlyWorking ?? experience.isCurrentlyWorking;
+    experience.startDate = startDate ?? experience.startDate;
+    experience.endDate = endDate ?? experience.endDate;
+    experience.description = description ?? experience.description;
 
     // Save the updated experience document
     await userExperience.save();
@@ -754,7 +753,7 @@ export const updateExperience = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Experience updated successfully.",
-      data: userExperience.experiences[experienceIndex],
+      data: experience,
     });
   } catch (error) {
     console.error("Error updating experience:", error);
