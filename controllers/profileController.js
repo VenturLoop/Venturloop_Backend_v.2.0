@@ -499,7 +499,7 @@ export const getAllEducationByUserId = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: userEducation.education,
+      education: userEducation.education,
     });
   } catch (error) {
     console.error("Error fetching education records:", error);
