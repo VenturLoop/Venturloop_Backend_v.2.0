@@ -508,10 +508,13 @@ export const getAllEducationByUserId = async (req, res) => {
   const { userId } = req.params; // Get userId from route parameters
 
   try {
-    // Find all education records for the given userId
-    const userEducation = await EducationModel.find({ userId });
+    // Find the education records for the given userId and select only the education field
+    const userEducation = await EducationModel.findOne(
+      { userId },
+      { education: 1 } // Select only the education field
+    );
 
-    if (!userEducation || userEducation.length === 0) {
+    if (!userEducation || !userEducation.education || userEducation.education.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No education records found for this user.",
@@ -520,7 +523,7 @@ export const getAllEducationByUserId = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      education: userEducation,
+      education: userEducation.education,
     });
   } catch (error) {
     console.error("Error fetching education records:", error);
@@ -530,6 +533,7 @@ export const getAllEducationByUserId = async (req, res) => {
     });
   }
 };
+
 
 // Controller to get a specific education record by userId and educationId
 export const getEducationById = async (req, res) => {
