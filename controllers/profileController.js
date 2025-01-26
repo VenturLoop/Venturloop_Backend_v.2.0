@@ -106,6 +106,11 @@ export const getUserProfileDetails = async (req, res) => {
       });
     }
 
+    // Fetch profile view count from ViewerModel
+    const viewerData = await ViewerModel.findOne({ userId });
+
+    const viewCount = viewerData ? viewerData.viewers.length : 0;
+
     // Return the user and profile details
     return res.status(200).json({
       success: true,
@@ -118,7 +123,8 @@ export const getUserProfileDetails = async (req, res) => {
         lastSeen: user.lastSeen,
         profile: user.profile,
         workingWith: user.workingWith.map((entry) => entry.postId), // Full
-        user: user, //  post details
+        totalConnections: user.totalConnections, //  post details
+        viewCount : viewCount, // Include view count in response
       },
     });
   } catch (error) {
