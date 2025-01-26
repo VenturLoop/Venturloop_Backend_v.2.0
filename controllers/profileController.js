@@ -117,7 +117,8 @@ export const getUserProfileDetails = async (req, res) => {
         userChatStatus: user.status,
         lastSeen: user.lastSeen,
         profile: user.profile,
-        workingWith: user.workingWith.map((entry) => entry.postId), // Full post details
+        workingWith: user.workingWith.map((entry) => entry.postId), // Full
+        user: user, //  post details
       },
     });
   } catch (error) {
