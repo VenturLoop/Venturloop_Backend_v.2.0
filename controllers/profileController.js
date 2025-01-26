@@ -124,7 +124,7 @@ export const getUserProfileDetails = async (req, res) => {
         profile: user.profile,
         workingWith: user.workingWith.map((entry) => entry.postId), // Full
         totalConnections: user.totalConnections, //  post details
-        viewCount : viewCount, // Include view count in response
+        viewCount: viewCount, // Include view count in response
       },
     });
   } catch (error) {
@@ -380,6 +380,7 @@ export const addEducation = async (req, res) => {
   const {
     degree,
     institution,
+    stream,
     currentlyStudying,
     startDate,
     endDate,
@@ -404,6 +405,7 @@ export const addEducation = async (req, res) => {
           education: {
             degree,
             institution,
+            stream,
             currentlyStudying,
             startDate,
             endDate,
@@ -434,6 +436,7 @@ export const updateEducation = async (req, res) => {
   const {
     degree,
     institution,
+    stream,
     currentlyStudying,
     startDate,
     endDate,
@@ -448,6 +451,8 @@ export const updateEducation = async (req, res) => {
         $set: {
           "education.$.degree": degree, // Update the degree
           "education.$.institution": institution, // Update the institution
+          "education.$.stream": stream, // Update the institution
+
           "education.$.currentlyStudying": currentlyStudying, // Update currentlyStudying status
           "education.$.startDate": startDate, // Update startDate
           "education.$.endDate": endDate, // Update endDate
@@ -585,6 +590,7 @@ export const addExperience = async (req, res) => {
     title,
     companyName, // Company name provided by user
     companyId, // Company ID provided by user
+    isCurrentlyWorking,
     startDate,
     endDate,
     description,
@@ -641,6 +647,7 @@ export const addExperience = async (req, res) => {
           {
             title,
             company: companyNameToUse,
+            isCurrentlyWorking,
             startDate,
             endDate,
             description,
@@ -654,6 +661,7 @@ export const addExperience = async (req, res) => {
       userExperience.experiences.push({
         title,
         company: companyNameToUse,
+        isCurrentlyWorking,
         startDate,
         endDate,
         description,

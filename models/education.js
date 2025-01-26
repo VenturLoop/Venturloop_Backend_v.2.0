@@ -12,6 +12,7 @@ const EducationSchema = new mongoose.Schema(
       {
         degree: { type: String }, // Degree or certification obtained
         institution: { type: String }, // Institution where the degree was obtained
+        stream : { type: String }, // Institution where the degree was obtained
         currentlyStudying: { type: Boolean }, // Whether the user is still studying
         startDate: { type: String }, // Start date of the education
         endDate: { type: String }, // End date of the education (optional)

@@ -15,7 +15,8 @@ const ExperienceSchema = new mongoose.Schema(
         startDate: { type: String }, // Start date of the experience
         endDate: { type: String }, // End date of the experience (optional)
         description: { type: String }, // Description of the role and responsibilities
-        companyPhoto: { type: String}, // URL or file upload for the company photo
+        isCurrentlyWorking: { type: String, default: false },
+        companyPhoto: { type: String }, // URL or file upload for the company photo
       },
     ],
   },
