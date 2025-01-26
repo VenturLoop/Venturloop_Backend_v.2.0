@@ -396,13 +396,15 @@ export const addEducation = async (req, res) => {
       });
     }
 
-    // Add education to the user's education array
-    const updatedEducation = await EducationModel.findOneAndUpdate(
-      { userId }, // Find the user by userId
-      {
-        $push: {
-          // Add new education record to the user's education array
-          education: {
+    // Find the user by userId and check if education is already present
+    const user = await EducationModel.findOne({ userId });
+
+    // If no user found or no education exists, create the first education entry
+    if (!user || !user.education) {
+      const newEducation = new EducationModel({
+        userId,
+        education: [
+          {
             degree,
             institution,
             stream,
@@ -411,15 +413,33 @@ export const addEducation = async (req, res) => {
             endDate,
             description,
           },
-        },
-      },
-      { upsert: true, new: true } // Create the document if it doesn't exist
-    );
+        ],
+      });
+
+      await newEducation.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Education added successfully.",
+      });
+    }
+
+    // If user exists and education exists, add new education to the existing array
+    user.education.push({
+      degree,
+      institution,
+      stream,
+      currentlyStudying,
+      startDate,
+      endDate,
+      description,
+    });
+
+    await user.save();
 
     return res.status(200).json({
       success: true,
       message: "Education added successfully.",
-      data: updatedEducation,
     });
   } catch (error) {
     console.error("Error adding education:", error);
@@ -429,6 +449,7 @@ export const addEducation = async (req, res) => {
     });
   }
 };
+
 
 // Controller to update education by educationId
 export const updateEducation = async (req, res) => {
