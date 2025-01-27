@@ -1441,17 +1441,19 @@ export const myskillSwapPost = async (req, res) => {
 
     // If no posts are found, return a message
     if (posts.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No skill swap posts found for this user." });
+      return res.status(404).json({
+        success: false,
+        message: "No skill swap posts found for this user.",
+      });
     }
 
     // Return the posts with populated userData
-    return res.status(200).json({ posts });
+    return res.status(200).json({ success: true, posts: posts });
   } catch (error) {
     console.error(error);
-    return res
-      .status(500)
-      .json({ message: "Something went wrong. Please try again later." });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong. Please try again later.",
+    });
   }
 };
