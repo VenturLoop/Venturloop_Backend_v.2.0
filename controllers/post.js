@@ -157,7 +157,19 @@ export const getPostDetails = async (req, res) => {
   try {
     const { postId } = req.params; // Get postId from route parameters
 
-    const postDetails = await Post.findById(postId); // Find post by postId
+    const postDetails = await Post.find({
+      userData: userId,
+      postType: "project",
+    })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "userData",
+        select: "name profile", // Select sender's name, status, and profile reference
+        populate: {
+          path: "profile", // Nested populate for profile details
+          select: "profilePhoto", // Fetch only profilePhoto and status
+        },
+      }); // Sort by latest
 
     if (!postDetails) {
       return res.status(404).json({
