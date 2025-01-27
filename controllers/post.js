@@ -1489,15 +1489,15 @@ export const votePollOption = async (req, res) => {
       return res.status(404).json({ message: "Poll option not found" });
     }
 
-    // Check if the user has already voted in this poll option
-    if (pollOption.votes.includes(userId)) {
-      return res
-        .status(400)
-        .json({ message: "You have already voted for this option" });
-    }
+    // // Check if the user has already voted in this poll option
+    // if (pollOption.votes.includes(userId)) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "You have already voted for this option" });
+    // }
 
-    // Add the userId to the selected poll option's votes
-    pollOption.votes.push(userId);
+    // // Add the userId to the selected poll option's votes
+    // pollOption.votes.push(userId);
 
     // Increment the vote count for the selected poll option
     pollOption.voteCount += 1;

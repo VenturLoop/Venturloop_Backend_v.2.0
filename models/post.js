@@ -68,11 +68,6 @@ const postSchema = new mongoose.Schema(
     polls: [
       {
         option: { type: String }, // Poll option text
-        votes: {
-          type: [mongoose.Schema.Types.ObjectId], // Array of user IDs who voted for this option
-          ref: "User",
-          default: [],
-        },
         voteCount: { type: Number, default: 0 }, // Total vote count for this option
       },
     ],
