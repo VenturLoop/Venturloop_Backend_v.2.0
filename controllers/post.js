@@ -157,10 +157,7 @@ export const getPostDetails = async (req, res) => {
   try {
     const { postId } = req.params; // Get postId from route parameters
 
-    const postDetails = await Post.findById({
-      postId,
-      postType: "project",
-    })
+    const postDetails = await Post.findById(postId)
       .sort({ createdAt: -1 })
       .populate({
         path: "userData",
