@@ -94,7 +94,7 @@ export const createPost = async (req, res) => {
     console.error("Error creating post:", error);
     res.status(500).json({
       success: false,
-      message: "Server error. Unable to create post.",
+      message: `0Server error. Unable to create post.${error}`,
     });
   }
 };

@@ -99,7 +99,6 @@ router.get("/comments/:postId", getallPostComments);
 
 // router.get("/total-likes/:postId", getTotalLikes);
 
-
 router.get("/is-user/:postId/saved/:userId", isPostSavedByUser);
 
 router.get("/search/users", searchUsers); // new
@@ -120,7 +119,10 @@ router.put("/accept-skill-swap/:postId/:userId", acceptSkillSwap); //new (in man
 
 router.delete("/decline-skill-swap/:postId/:userId", declineSkillSwap); //new  (in manage post)
 
-router.get("/get-skillSwap-Applications/:postId/:userId", fetchSkillSwapApplications); //new   (in manage post)
+router.get(
+  "/get-skillSwap-Applications/:postId/:userId",
+  fetchSkillSwapApplications
+); //new   (in manage post)
 
 router.get("/get-skillSwap-posts/:userId", fetchSkillSwapPostsByUser); //new  (in invite)
 
