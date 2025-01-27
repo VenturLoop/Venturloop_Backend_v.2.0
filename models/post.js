@@ -6,7 +6,7 @@ const postSchema = new mongoose.Schema(
     title: { type: String, maxlength: 40 },
 
     // postType: All
-    description: { type: String, maxlength: 120 },
+    description: { type: String },
 
     // postType: project
     openRoles: [

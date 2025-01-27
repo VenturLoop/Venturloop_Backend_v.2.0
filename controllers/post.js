@@ -1446,7 +1446,7 @@ export const myskillSwapPost = async (req, res) => {
         message: "No skill swap posts found for this user.",
       });
     }
-
+    
     // Return the posts with populated userData
     return res.status(200).json({ success: true, posts: posts });
   } catch (error) {
