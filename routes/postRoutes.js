@@ -132,8 +132,8 @@ router.get("/get-saved-skillswap-posts/:userId", fetchSavedSkillSwapPosts); //ne
 
 router.get("/my-skillSwap/:userId", myskillSwapPost); //new  (in myprofile)
 
-router.post("/:postId/vote/:pollOptionId", votePollOption); //new
+router.post("/:postId/vote/:pollOptionId/:userId", votePollOption); //new
 
-router.get("/:postId/user-vote", getUserPollSelection); //new
+router.get("/:postId/user-vote/:userId", getUserPollSelection); //new
 
 export default router;
