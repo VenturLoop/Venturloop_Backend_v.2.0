@@ -1466,3 +1466,84 @@ export const myskillSwapPost = async (req, res) => {
     });
   }
 };
+
+export const votePollOption = async (req, res) => {
+  try {
+    const { userId, postId, pollOptionId } = req.params;
+    // Find the post by ID
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Check if the post has polls
+    if (!post.polls || post.polls.length === 0) {
+      return res.status(400).json({ message: "This post has no polls" });
+    }
+
+    // Find the poll option by ID
+    const pollOption = post.polls.id(pollOptionId);
+
+    if (!pollOption) {
+      return res.status(404).json({ message: "Poll option not found" });
+    }
+
+    // Check if the user has already voted in this poll option
+    if (pollOption.votes.includes(userId)) {
+      return res
+        .status(400)
+        .json({ message: "You have already voted for this option" });
+    }
+
+    // Add the userId to the selected poll option's votes
+    pollOption.votes.push(userId);
+
+    // Increment the vote count for the selected poll option
+    pollOption.voteCount += 1;
+
+    // Save the updated post
+    await post.save();
+
+    // Return the updated poll options with vote counts
+    return res.status(200).json({
+      message: "Vote successfully added",
+      updatedPolls: post.polls,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Get the selected poll option for the current user
+export const getUserPollSelection = async (req, res) => {
+  try {
+    const { userId, postId } = req.params;
+
+    // Find the post by ID
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Find the poll option that the user has voted for
+    const userVote = post.polls.filter((poll) => poll.votes.includes(userId));
+
+    if (!userVote || userVote.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "You haven't voted in this poll" });
+    }
+
+    // Return the user's selected poll option
+    return res.status(200).json({
+      message: "User poll selection",
+      userVote,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
