@@ -32,6 +32,8 @@ import {
   fetchSkillSwapPostsByUser,
   fetchSavedSkillSwapPosts,
   myskillSwapPost,
+  getUserPollSelection,
+  votePollOption,
 } from "../controllers/post.js";
 
 const router = express.Router();
