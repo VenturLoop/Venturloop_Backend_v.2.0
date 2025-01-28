@@ -8,7 +8,8 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 
 // Use the correct path for the Render secret file
-const serviceAccountPath = "/etc/secrets/push-notification-33d0f-firebase-adminsdk-fbsvc-6c4075929f.json";
+const serviceAccountPath =
+  "/etc/secrets/push-notification-33d0f-firebase-adminsdk-fbsvc-6c4075929f.json";
 
 // Check if the file exists before initializing Firebase
 if (!fs.existsSync(serviceAccountPath)) {
@@ -302,32 +303,31 @@ export class SocketManager {
           select: "profilePhoto", // Fetch only profilePhoto
         });
 
-      // Fetch the post owner and send a notification
-      const postOwner = await UserModel.findById(updatedPost.ownerId).select(
-        "pushToken"
-      );
-      if (postOwner && postOwner.pushToken) {
-        const notificationTitle = "Post Liked";
-        const notificationBody = userWhoLiked
-          ? `${userWhoLiked.name} liked your post.`
-          : "Someone liked your post.";
+      // // Fetch the post owner and send a notification
+      // const postOwner = await UserModel.findById(updatedPost.ownerId).select(
+      //   "pushToken"
+      // );
+      // if (postOwner && postOwner.pushToken) {
+      //   const notificationTitle = "Post Liked";
+      //   const notificationBody = userWhoLiked
+      //     ? `${userWhoLiked.name} liked your post.`
+      //     : "Someone liked your post.";
 
-        await fcm.send({
-          token: postOwner.pushToken,
-          notification: {
-            title: notificationTitle,
-            body: notificationBody,
-          },
-          data: {
-            postId,
-            userId,
-            userName: userWhoLiked?.name || "Anonymous",
-            userProfilePhoto: userWhoLiked?.profilePhoto || "", // Provide a default value if missing
-          },
-        });
-        console.log(`[Push] Notification sent to post owner: ${postOwner._id}`);
-      }
-
+      //   await fcm.send({
+      //     token: postOwner.pushToken,
+      //     notification: {
+      //       title: notificationTitle,
+      //       body: notificationBody,
+      //     },
+      //     data: {
+      //       postId,
+      //       userId,
+      //       userName: userWhoLiked?.name || "Anonymous",
+      //       userProfilePhoto: userWhoLiked?.profilePhoto || "", // Provide a default value if missing
+      //     },
+      //   });
+      //   console.log(`[Push] Notification sent to post owner: ${postOwner._id}`);
+      // }
       socket.emit("like_updated", {
         postId,
         likesCount: updatedPost.likes.count,
@@ -376,33 +376,33 @@ export class SocketManager {
           select: "profilePhoto", // Fetch only profilePhoto
         });
 
-      // Fetch the post owner and send a notification
-      const postOwner = await UserModel.findById(updatedPost.ownerId).select(
-        "pushToken"
-      );
+      // // Fetch the post owner and send a notification
+      // const postOwner = await UserModel.findById(updatedPost.ownerId).select(
+      //   "pushToken"
+      // );
 
-      if (postOwner && postOwner.pushToken) {
-        const notificationTitle = "New Comment on Your Post";
-        const notificationBody = userWhoCommented
-          ? `${userWhoCommented.name} commented: "${comment}"`
-          : "Someone commented on your post.";
+      // if (postOwner && postOwner.pushToken) {
+      //   const notificationTitle = "New Comment on Your Post";
+      //   const notificationBody = userWhoCommented
+      //     ? `${userWhoCommented.name} commented: "${comment}"`
+      //     : "Someone commented on your post.";
 
-        await fcm.send({
-          token: postOwner.pushToken,
-          notification: {
-            title: notificationTitle,
-            body: notificationBody,
-          },
-          data: {
-            postId,
-            userId,
-            userName: userWhoCommented?.name || "Anonymous",
-            userProfilePhoto: userWhoCommented?.profile?.profilePhoto || "", // Nested access for profile photo
-            comment,
-          },
-        });
-        console.log(`[Push] Notification sent to post owner: ${postOwner._id}`);
-      }
+      //   await fcm.send({
+      //     token: postOwner.pushToken,
+      //     notification: {
+      //       title: notificationTitle,
+      //       body: notificationBody,
+      //     },
+      //     data: {
+      //       postId,
+      //       userId,
+      //       userName: userWhoCommented?.name || "Anonymous",
+      //       userProfilePhoto: userWhoCommented?.profile?.profilePhoto || "", // Nested access for profile photo
+      //       comment,
+      //     },
+      //   });
+      //   console.log(`[Push] Notification sent to post owner: ${postOwner._id}`);
+      // }
     } catch (error) {
       console.error("[Posts] Error in handleCommentOnPost:", error);
     }
