@@ -7,6 +7,7 @@ import admin from "firebase-admin";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import mongoose from "mongoose";
 const { ObjectId } = mongoose.Types;
 
 
