@@ -913,12 +913,28 @@ export const getPopularUsers = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "userprofiles", // Reference to the UserProfile model
+          localField: "profile", // Reference to UserProfile by ObjectId
+          foreignField: "_id",
+          as: "profileData",
+        },
+      },
+      {
+        $unwind: {
+          path: "$profileData", // Unwind to get the profile fields
+          preserveNullAndEmptyArrays: true, // In case there's no profile data
+        },
+      },
+      {
         $project: {
           _id: 1,
           name: 1,
           email: 1,
           postCount: 1,
           connectionCount: 1,
+          profilePhoto: "$profileData.profilePhoto", // Populate profilePhoto
+          location: "$profileData.location", // Populate location
           totalScore: { $sum: ["$postCount", "$connectionCount"] }, // Sum of posts and connections
         },
       },

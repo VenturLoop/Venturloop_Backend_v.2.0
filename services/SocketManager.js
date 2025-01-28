@@ -362,7 +362,7 @@ export class SocketManager {
   
         // Fetch the user who commented and populate profile image
         const userWhoCommented = await UserModel.findById(userId)
-          .select("profile")
+          .select("name profile")
           .populate({
             path: "profile",
             select: "profilePhoto", // Fetch profilePhoto only
@@ -373,7 +373,7 @@ export class SocketManager {
           comment: newComment.comment,
           createdAt: newComment.createdAt,
           profilePhoto: userWhoCommented?.profile?.profilePhoto || "", // Ensure profilePhoto is included
-          user: userId,
+          user:userWhoCommented?.name,
         };
   
         // Emit the formatted comment
