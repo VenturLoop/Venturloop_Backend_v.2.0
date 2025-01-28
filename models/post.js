@@ -96,6 +96,8 @@ const postSchema = new mongoose.Schema(
 
     // All
     saves: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users who saved the post
+    savesCount:{ type: Number, default: 0 },
+
 
     // postType: Project
     appliedUsers: [
