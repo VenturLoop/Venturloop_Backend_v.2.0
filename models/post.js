@@ -96,8 +96,7 @@ const postSchema = new mongoose.Schema(
 
     // All
     saves: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users who saved the post
-    savesCount:{ type: Number, default: 0 },
-
+    savesCount: { type: Number, default: 0 },
 
     // postType: Project
     appliedUsers: [
@@ -156,6 +155,7 @@ const postSchema = new mongoose.Schema(
         },
       },
     ],
+    commentsCount: { type: Number, default: 0 }, // Add this field
 
     createdAt: { type: Date, default: Date.now },
   },
