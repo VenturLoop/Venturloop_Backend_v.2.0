@@ -333,77 +333,84 @@ export class SocketManager {
   /** ===========================
      *     Comment on Post
      ============================ */
-  async handleCommentOnPost(socket, data) {
-    try {
-      const { userId, postId, comment } =
-        typeof data === "string" ? JSON.parse(data) : data;
-      if (!userId || !postId || !comment) return;
-
-      const newComment = {
-        _id: new ObjectId(), // Generate a new ObjectId for the comment
-        user: userId,
-        comment: comment,
-        createdAt: new Date(),
-      };
-
-      // Update post with new comment and increment commentsCount
-      const updatedPost = await Post.findByIdAndUpdate(
-        postId,
-        { $push: { comments: newComment }, $inc: { commentsCount: 1 } },
-        { new: true }
-      );
-
-      // Fetch the user who commented and populate profile image
-      const userWhoCommented = await UserModel.findById(userId)
-        .select("profile")
-        .populate({
-          path: "profile",
-          select: "profilePhoto", // Fetch profilePhoto only
+     async handleCommentOnPost(socket, data) {
+      try {
+        const { userId, postId, comment } =
+          typeof data === "string" ? JSON.parse(data) : data;
+        if (!userId || !postId || !comment) return;
+  
+        const newComment = {
+          _id: new ObjectId(), // Generate a new ObjectId for the comment
+          user: userId,
+          comment: comment,
+          createdAt: new Date(),
+        };
+  
+        const newComment2 = {
+          userId,
+          text: comment,
+          timestamp: new Date(),
+        };
+    
+  
+        // Update post with new comment and increment commentsCount
+        const updatedPost = await Post.findByIdAndUpdate(
+          postId,
+          { $push: { comments: newComment2 }, $inc: { commentsCount: 1 } },
+          { new: true }
+        );
+  
+        // Fetch the user who commented and populate profile image
+        const userWhoCommented = await UserModel.findById(userId)
+          .select("profile")
+          .populate({
+            path: "profile",
+            select: "profilePhoto", // Fetch profilePhoto only
+          });
+  
+        const formattedComment = {
+          _id: newComment._id,
+          comment: newComment.comment,
+          createdAt: newComment.createdAt,
+          profilePhoto: userWhoCommented?.profile?.profilePhoto || "", // Ensure profilePhoto is included
+          user: userId,
+        };
+  
+        // Emit the formatted comment
+        this.io.of("/posts").emit("comment_added", formattedComment);
+  
+        // Send comment success response to the socket
+        socket.emit("comment_success", {
+          postId,
+          commentsCount: updatedPost.commentsCount,
         });
-
-      const formattedComment = {
-        _id: newComment._id,
-        comment: newComment.comment,
-        createdAt: newComment.createdAt,
-        profilePhoto: userWhoCommented?.profile?.profilePhoto || "", // Ensure profilePhoto is included
-        user: userId,
-      };
-
-      // Emit the formatted comment
-      this.io.of("/posts").emit("comment_added", formattedComment);
-
-      // Send comment success response to the socket
-      socket.emit("comment_success", {
-        postId,
-        commentsCount: updatedPost.commentsCount,
-      });
-
-      // Fetch the post owner for notification
-      const postOwner = await UserModel.findById(updatedPost.ownerId);
-
-      if (postOwner && postOwner.pushToken) {
-        const notificationTitle = "New Comment on Your Post";
-        const notificationBody = `${
-          userWhoCommented?.name || "Anonymous"
-        } commented: "${comment}"`;
-
-        await fcm.send({
-          token: postOwner.pushToken,
-          notification: { title: notificationTitle, body: notificationBody },
-          data: {
-            postId,
-            userId,
-            userName: userWhoCommented?.name || "Anonymous",
-            userProfilePhoto: userWhoCommented?.profile?.profilePhoto || "",
-            comment,
-          },
-        });
-        console.log(`[Push] Notification sent to post owner: ${postOwner._id}`);
+  
+        // Fetch the post owner for notification
+        const postOwner = await UserModel.findById(updatedPost.ownerId);
+  
+        if (postOwner && postOwner.pushToken) {
+          const notificationTitle = "New Comment on Your Post";
+          const notificationBody = `${
+            userWhoCommented?.name || "Anonymous"
+          } commented: "${comment}"`;
+  
+          await fcm.send({
+            token: postOwner.pushToken,
+            notification: { title: notificationTitle, body: notificationBody },
+            data: {
+              postId,
+              userId,
+              userName: userWhoCommented?.name || "Anonymous",
+              userProfilePhoto: userWhoCommented?.profile?.profilePhoto || "",
+              comment,
+            },
+          });
+          console.log(`[Push] Notification sent to post owner: ${postOwner._id}`);
+        }
+      } catch (error) {
+        console.error("[Posts] Error in handleCommentOnPost:", error);
       }
-    } catch (error) {
-      console.error("[Posts] Error in handleCommentOnPost:", error);
     }
-  }
   /** ===========================
      *     Save/Unsave Post
      ============================ */
