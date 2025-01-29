@@ -196,7 +196,10 @@ export const getFeedPosts = async (req, res) => {
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
 
-    // Fetch the latest posts when the user refreshes or opens the page
+    // Calculate the total number of posts
+    const totalPosts = await Post.countDocuments(); // Total count of posts in the DB
+
+    // Fetch the latest posts and the newest 5 posts at once
     const posts = await Post.find()
       .sort({ createdAt: -1 }) // Sort by latest posts first
       .skip((pageNum - 1) * limitNum) // Pagination
@@ -208,7 +211,10 @@ export const getFeedPosts = async (req, res) => {
           path: "profile", // Nested populate for profile details
           select: "profilePhoto", // Fetch only profilePhoto and status
         },
-      }); // Limit the number of posts per page
+      });
+
+    // Check if there are more posts to load
+    const hasMore = pageNum * limitNum < totalPosts;
 
     // Fetch the 5 newest posts to show on top of the feed
     const newPosts = await Post.find()
@@ -221,7 +227,7 @@ export const getFeedPosts = async (req, res) => {
           path: "profile", // Nested populate for profile details
           select: "profilePhoto", // Fetch only profilePhoto and status
         },
-      }); // Latest posts for top
+      });
 
     res.status(200).json({
       success: true,
@@ -230,7 +236,8 @@ export const getFeedPosts = async (req, res) => {
         newPosts: newPosts, // New posts to be displayed at the top
       },
       page: pageNum,
-      totalPosts: posts.length,
+      totalPosts, // Return the total count of posts for the client to use in pagination
+      hasMore, // Indicate whether there are more posts to load
     });
   } catch (error) {
     console.error("Error fetching feed posts:", error);
