@@ -53,8 +53,8 @@ export class SocketManager {
   }
 
   /** ===========================
-     *     Chat Namespace
-     ============================ */
+   *     Chat Namespace
+   ============================ */
   setupChatNamespace() {
     const chatNamespace = this.io.of("/chat");
 
@@ -73,6 +73,14 @@ export class SocketManager {
 
       await this.markMessagesAsDelivered(userId, socket);
 
+      // Get the unseen messages count grouped by senderId
+      const unseenMessagesCount = await this.getUnseenMessagesCountBySender(
+        userId
+      );
+
+      // Emit the unseen messages count by sender to the user
+      socket.emit("user_unseen_message_count", unseenMessagesCount);
+
       socket.on("send_message", (data) => this.handleNewMessage(socket, data));
       socket.on("message_seen", (data) => this.handleMessageSeen(socket, data));
 
@@ -81,8 +89,8 @@ export class SocketManager {
   }
 
   /** ===========================
-     *     Posts Namespace
-     ============================ */
+   *     Posts Namespace
+   ============================ */
   setupPostNamespace() {
     const postNamespace = this.io.of("/posts");
 
@@ -100,8 +108,8 @@ export class SocketManager {
   }
 
   /** ===========================
-     *     Users Namespace
-     ============================ */
+   *     Users Namespace
+   ============================ */
   setupUserNamespace() {
     const userNamespace = this.io.of("/users");
 
@@ -113,8 +121,8 @@ export class SocketManager {
   }
 
   /** ===========================
-     *     User Session Tracking
-     ============================ */
+   *     User Session Tracking
+   ============================ */
   addUser(userId, socketId) {
     if (!this.inMemoryUsers.has(userId)) {
       this.inMemoryUsers.set(userId, new Set());
@@ -133,8 +141,8 @@ export class SocketManager {
   }
 
   /** ===========================
-     *     Chat Functions
-     ============================ */
+   *     Chat Functions
+   ============================ */
   async handleNewMessage(socket, data) {
     try {
       const { senderId, recipientId, content, tempId } =
@@ -163,13 +171,11 @@ export class SocketManager {
               ...message.toObject(),
               isSentByMe: false,
             });
-          this.io
-            .of("/chat")
-            .to(socketId)
-            .emit("unread_message_count", {
-              count: (this.unreadMessagesCount.get(recipientId) || 0) + 1,
-            });
+
+          // Emit updated unread message count after sending the message
+          this.emitUnreadMessageCount(socketId, recipientId, content); // Emit new unread count to recipient
         });
+
         message.isDelivered = true;
         message.deliveredAt = new Date();
         await message.save();
@@ -217,30 +223,63 @@ export class SocketManager {
     }
   }
 
-  async handleMessageSeen(socket, data) {
+  async emitUnreadMessageCount(socketId, recipientId, content) {
     try {
-      const { messageIds, userId } =
-        typeof data === "string" ? JSON.parse(data) : data;
-      if (!userId || !Array.isArray(messageIds))
-        return socket.emit("error", { message: "Invalid data format." });
-
-      await Message.updateMany(
-        { _id: { $in: messageIds }, recipientId: userId, isSeen: false },
-        { isSeen: true, seenAt: new Date() }
+      const unseenMessagesCount = await this.getUnseenMessagesCountBySender(
+        recipientId,
+        content
       );
 
+      // Emit the updated unread message count to the recipient
+      this.io
+        .of("/chat")
+        .to(socketId)
+        .emit("message_unread_count_when_connected", unseenMessagesCount);
+    } catch (error) {
+      console.error("[Chat] Error in emitting unread message count:", error);
+    }
+  }
+
+  async handleMessageSeen(socket, data) {
+    try {
+      // Parse incoming data if it's a string
+      const { messageIds, senderId, recipientId } =
+        typeof data === "string" ? JSON.parse(data) : data;
+
+      // Validate data
+      if (!senderId || !recipientId || !Array.isArray(messageIds)) {
+        return socket.emit("error", { message: "Invalid data format." });
+      }
+
+      // Update only the messages sent by the specific sender to the specific recipient
+      await Message.updateMany(
+        {
+          _id: { $in: messageIds }, // Filter by message IDs
+          senderId, // Match the senderId
+          recipientId, // Match the recipientId
+          isSeen: false, // Only update messages that are not already seen
+        },
+        {
+          isSeen: true, // Mark messages as seen
+          seenAt: new Date(), // Set the timestamp for when the message was seen
+        }
+      );
+
+      // Update the unread message count for the recipient
       this.unreadMessagesCount.set(
-        userId,
+        recipientId,
         Math.max(
           0,
-          (this.unreadMessagesCount.get(userId) || 0) - messageIds.length
+          (this.unreadMessagesCount.get(recipientId) || 0) - messageIds.length
         )
       );
 
+      // Emit acknowledgment back to the client
       socket.emit("message_seen_ack", { messageIds });
 
+      // Notify the sender that their messages have been seen
       messageIds.forEach((messageId) => {
-        const senderSockets = this.inMemoryUsers.get(userId);
+        const senderSockets = this.inMemoryUsers.get(senderId);
         if (senderSockets) {
           senderSockets.forEach((socketId) =>
             this.io
@@ -257,33 +296,76 @@ export class SocketManager {
 
   async markMessagesAsDelivered(userId, socket) {
     try {
+      // Fetch all undelivered messages for the recipient user
       const undeliveredMessages = await Message.find({
         recipientId: userId,
         isDelivered: false,
       });
 
-      undeliveredMessages.forEach(async (message) => {
+      // Loop through each undelivered message and mark it as delivered
+      for (const message of undeliveredMessages) {
+        // Mark the message as delivered and set the deliveredAt timestamp
         message.isDelivered = true;
         message.deliveredAt = new Date();
-        await message.save();
-        socket.emit("receive_message", {
-          ...message.toObject(),
-          isSentByMe: false,
-        });
-      });
+        await message.save(); // Save the updated message
 
+        // Emit the message to the recipient's socket to notify them
+        socket.emit("receive_message", {
+          ...message.toObject(), // Send the message as a plain object
+          isSentByMe: false, // The message was not sent by the current user
+        });
+      }
+
+      // Log the number of messages marked as delivered
       console.log(
         `[Chat] Marked ${undeliveredMessages.length} messages as delivered`
       );
     } catch (error) {
+      // Log any errors encountered during the process
       console.error("[Chat] Error in markMessagesAsDelivered:", error);
     }
   }
 
-  /** ===========================
-     *     Post Functions
-     ============================ */
+  async getUnseenMessagesCountBySender(userId, content) {
+    try {
+      // Fetch messages that are delivered but not seen for the user
+      const unseenMessages = await Message.find({
+        recipientId: userId,
+        isDelivered: true, // Ensure the message is delivered
+        isSeen: false, // Ensure the message is not seen
+      }).sort({ timestamp: -1 }); // Sort messages by timestamp to get the latest ones first
 
+      // Group messages by senderId and count them
+      const senderMessageCount = unseenMessages.reduce((acc, message) => {
+        const senderId = message.senderId.toString(); // Convert senderId to string for comparison
+
+        if (acc[senderId]) {
+          acc[senderId].count += 1; // Increment the count for the sender
+        } else {
+          acc[senderId] = {
+            senderId,
+            count: 1, // Initialize the count for this sender
+            latestMessage: content || message.content, // Store the latest message content
+            latestMessageTimestamp: message.timestamp, // Store the timestamp of the latest message
+          };
+        }
+        return acc;
+      }, {});
+
+      // Return the sender-wise count of unseen messages and latest message content
+      return Object.values(senderMessageCount); // Return as an array of {senderId, count, latestMessage}
+    } catch (error) {
+      console.error(
+        "[Chat] Error in fetching unseen message counts by sender:",
+        error
+      );
+      return [];
+    }
+  }
+
+  /** ===========================
+   *     Post Functions
+   ============================ */
   async handleLikePost(socket, data) {
     try {
       const { userId, postId } =
@@ -330,8 +412,8 @@ export class SocketManager {
   }
 
   /** ===========================
-     *     Comment on Post
-     ============================ */
+   *     Comment on Post
+   ============================ */
   async handleCommentOnPost(socket, data) {
     try {
       const { userId, postId, comment } =
@@ -360,7 +442,7 @@ export class SocketManager {
 
       // Fetch the user who commented and populate profile image
       const userWhoCommented = await UserModel.findById(userId)
-        .select("name profile")
+        .select("profile")
         .populate({
           path: "profile",
           select: "profilePhoto", // Fetch profilePhoto only
@@ -371,7 +453,7 @@ export class SocketManager {
         comment: newComment.comment,
         createdAt: newComment.createdAt,
         profilePhoto: userWhoCommented?.profile?.profilePhoto || "", // Ensure profilePhoto is included
-        user: userWhoCommented?.name,
+        user: userId,
       };
 
       // Emit the formatted comment
@@ -409,9 +491,10 @@ export class SocketManager {
       console.error("[Posts] Error in handleCommentOnPost:", error);
     }
   }
+
   /** ===========================
-     *     Save/Unsave Post
-     ============================ */
+   *     Save/Unsave Post
+   ============================ */
   async handleSavePost(socket, data) {
     try {
       const { userId, postId } =
