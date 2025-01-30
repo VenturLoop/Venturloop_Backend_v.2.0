@@ -363,36 +363,40 @@ export const getSentInvitations = async (req, res) => {
   }
 };
 
-// Get list of connected users
 export const getConnectedUsers = async (req, res) => {
   const { userId } = req.params;
 
   try {
     // Find user's connections from ConnectedUsers model
     const userConnections = await ConnectedUsers.findOne({ userId }).populate({
-      path: "connections.user", // Populate user details from User model
-      select: "name profile", // Fetch name and profile
+      path: "connections.user",
+      model: User,
+      select: "name profile",
       populate: {
         path: "profile",
-        select: "profilePhoto", // Fetch only profilePhoto from profile
+        select: "profilePhoto",
       },
     });
 
     if (!userConnections) {
       return res.status(200).json({
         success: true,
-        connectedUsers: [], // Return empty array if no connections
+        connectedUsers: [],
       });
     }
 
-    // Map connected users with required fields
-    const connectedUsers = userConnections.connections.map((conn) => ({
-      id: conn.user._id,
-      name: conn.user.name,
-      profilePhoto: conn.user.profile ? conn.user.profile.profilePhoto : null,
-      createdAt: conn.createdAt,
-      updatedAt: conn.updatedAt,
-    }));
+    // Ensure all connections are properly mapped
+    const connectedUsers = userConnections.connections.map((conn) => {
+      if (!conn.user) return null; // Handle case where user is missing
+      return {
+        id: conn.user._id,
+        name: conn.user.name,
+        profilePhoto: conn.user.profile ? conn.user.profile.profilePhoto : null,
+        createdAt: conn.createdAt,
+        updatedAt: conn.updatedAt,
+        connectionCreatedAt: conn.connectedAt, // Include actual connection creation time
+      };
+    }).filter(user => user !== null); // Remove any null values
 
     return res.status(200).json({
       success: true,
@@ -403,6 +407,7 @@ export const getConnectedUsers = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch connected users.",
+      error: error.message,
     });
   }
 };
