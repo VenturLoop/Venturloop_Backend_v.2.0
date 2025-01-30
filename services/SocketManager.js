@@ -81,6 +81,9 @@ export class SocketManager {
       // Emit the unseen messages count by sender to the user
       socket.emit("user_unseen_message_count", unseenMessagesCount);
 
+          // ✅ Listen for `mark_as_seen` event
+    socket.on("mark_as_seen", (data) => this.handleMarkAsSeen(socket, data));
+
       socket.on("send_message", (data) => this.handleNewMessage(socket, data));
       socket.on("message_seen", (data) => this.handleMessageSeen(socket, data));
 
@@ -325,6 +328,59 @@ export class SocketManager {
       console.error("[Chat] Error in markMessagesAsDelivered:", error);
     }
   }
+
+  async handleMarkAsSeen(socket, data) {
+    try {
+      // Parse incoming data if it's a string
+      const { messageIds, senderId, recipientId } =
+        typeof data === "string" ? JSON.parse(data) : data;
+  
+      // Validate data
+      if (!senderId || !recipientId || !Array.isArray(messageIds)) {
+        return socket.emit("error", { message: "Invalid data format." });
+      }
+  
+      // Update messages in the database
+      await Message.updateMany(
+        {
+          _id: { $in: messageIds },
+          senderId, // Match the senderId
+          recipientId, // Match the recipientId
+          isSeen: false, // Update only unseen messages
+        },
+        {
+          isSeen: true,
+          seenAt: new Date(),
+        }
+      );
+  
+      // Update unread message count for the recipient
+      this.unreadMessagesCount.set(
+        recipientId,
+        Math.max(
+          0,
+          (this.unreadMessagesCount.get(recipientId) || 0) - messageIds.length
+        )
+      );
+  
+      // Emit acknowledgment back to the client
+      socket.emit("message_seen_ack", { messageIds });
+  
+      // Notify the sender that their messages have been seen
+      const senderSockets = this.inMemoryUsers.get(senderId);
+      if (senderSockets) {
+        senderSockets.forEach((socketId) =>
+          this.io.of("/chat").to(socketId).emit("message_seen", { messageIds })
+        );
+      }
+  
+      console.log(`[Chat] Marked ${messageIds.length} messages as seen`);
+    } catch (error) {
+      console.error("[Chat] Error in handleMarkAsSeen:", error);
+      socket.emit("error", { message: "Failed to mark messages as seen." });
+    }
+  }
+  
 
   async getUnseenMessagesCountBySender(userId, content) {
     try {
