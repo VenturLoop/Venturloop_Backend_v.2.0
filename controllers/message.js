@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 import Message from "../models/message.js";
 import UserModel from "../models/user.js";
 import Connection from "../models/connection.js";
-
-// Helper function to register user and update their status
+import mongoose from "mongoose";
+import ConnectedUsers from "../models/connectedUsers.js";
 
 // Fetch message history
 export const history = async (req, res) => {
@@ -85,7 +85,6 @@ export const deleteMessage = async (req, res) => {
       .json({ error: "Failed to delete message", details: err.message });
   }
 };
-
 
 // unseen Message and connection number
 export const getUnseenConnectionsAndMessages = async (req, res) => {
@@ -197,6 +196,62 @@ export const getUnseenMessages = async (req, res) => {
       message: "Internal server error. Please try again later.",
       error: error.message,
     });
+  }
+};
+
+export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, error: "Invalid user ID" });
+    }
+
+    // Find the user's connected users
+    const connectedUsers = await ConnectedUsers.findOne({ userId }).populate({
+      path: "connections.user",
+      select: "_id name profile",
+      populate: {
+        path: "profile",
+        select: "profilePhoto",
+      },
+    });
+
+    if (!connectedUsers) {
+      return res
+        .status(404)
+        .json({ success: false, error: "No connected users found" });
+    }
+
+    const usersWithMessages = [];
+
+    for (const connection of connectedUsers.connections) {
+      const latestMessage = await Message.findOne({
+        $or: [
+          { senderId: userId, recipientId: connection.user._id },
+          { senderId: connection.user._id, recipientId: userId },
+        ],
+      })
+        .sort({ timestamp: -1 })
+        .select("content senderId recipientId status timestamp");
+
+      if (latestMessage) {
+        usersWithMessages.push({
+          user: {
+            _id: connection.user._id,
+            name: connection.user.name,
+            profilePhoto: connection.user.profile?.profilePhoto || "",
+          },
+          latestMessage,
+        });
+      }
+    }
+
+    res.status(200).json({ success: true, data: usersWithMessages });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 };
 

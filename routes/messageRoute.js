@@ -1,6 +1,7 @@
 import express from "express";
 import {
   deleteMessage,
+  getConnectedUsersWithMessagesinMessageTab,
   getStatus,
   getUnseenMessages,
   history,
@@ -19,6 +20,9 @@ router.get("/messages/unseen/:userId", getUnseenMessages);
 
 router.put("/messages/seen", markMessagesAsSeenBetweenUsers);
 
-
+router.get(
+  "/connected-users-messages/:userId",
+  getConnectedUsersWithMessagesinMessageTab
+); //new
 
 export default router;
