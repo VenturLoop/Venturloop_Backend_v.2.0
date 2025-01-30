@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import Message from "../models/message.js";
 import UserModel from "../models/user.js";
 import Connection from "../models/connection.js";
-import mongoose from "mongoose";
 import ConnectedUsers from "../models/connectedUsers.js";
 
 // Fetch message history
