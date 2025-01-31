@@ -249,37 +249,38 @@ export const getFeedPosts = async (req, res) => {
 
 export const getAllProjectInSearch = async (req, res) => {
   try {
-    const { page = 1 } = req.query; // Get page number from query, default is 1
-    const limit = 10; // Limit 10 posts per request
-    const skip = (page - 1) * limit; // Calculate skip value
+    const { page = 1, limit = 10 } = req.query; // Default to fetching 10 posts per request
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
 
-    // Fetch 10 posts with postType "project"
-    const projects = await Post.find({ postType: "project" })
-      .sort({ createdAt: -1 }) // Sort by latest posts first
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: "userData",
-        select: "name profile", // Select user's name & profile reference
-        populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
-        },
-      })
-      .select("title description category startupStage createdAt userData"); // Only fetch required fields
+    // Calculate skip value based on the page and limit
+    const skip = (pageNum - 1) * limitNum;
 
-    if (!projects || projects.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No projects found",
-      });
-    }
+    // Fetch total number of posts and the posts themselves
+    const [totalPosts, posts] = await Promise.all([
+      Post.countDocuments(), // Count of total posts in the DB
+      Post.find({ postType: "project" })
+        .sort({ createdAt: -1 }) // Sort by latest posts first
+        .skip(skip) // Pagination
+        .limit(limitNum) // Fetch only the number of posts based on the limit
+        .populate({
+          path: "userData",
+          select: "name profile", // Select sender's name & profile reference
+          populate: {
+            path: "profile",
+            select: "profilePhoto", // Fetch only profilePhoto and status
+          },
+        }),
+    ]);
+
+    // Determine if more posts are available for pagination
+    const hasMore = pageNum * limitNum < totalPosts;
 
     return res.status(200).json({
       success: true,
       message: "Projects fetched successfully.",
-      data: projects,
-      hasMore: projects.length === limit, // Check if more projects are available
+      data: posts,
+      hasMore, // More posts available if true
     });
   } catch (error) {
     console.error("Error fetching projects:", error);
@@ -292,39 +293,38 @@ export const getAllProjectInSearch = async (req, res) => {
 
 export const getAllPostInSearch = async (req, res) => {
   try {
-    const { page = 1 } = req.query; // Get page number from query, default is 1
-    const limit = 10; // Limit 10 posts per request
-    const skip = (page - 1) * limit; // Calculate skip value
+    const { page = 1, limit = 10 } = req.query; // Default to fetching 10 posts per request
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
 
-    // Fetch 10 posts with postType "project"
-    const projects = await Post.find({
-      postType: { $in: ["post", "poles", "youtubeUrl"] },
-    })
-      .sort({ createdAt: -1 }) // Sort by latest posts first
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: "userData",
-        select: "name profile", // Select user's name & profile reference
-        populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
-        },
-      })
-      .select("title description postType createdAt userData videoUrl"); // Only fetch required fields
+    // Calculate skip value based on the page and limit
+    const skip = (pageNum - 1) * limitNum;
 
-    if (!projects || projects.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No projects found",
-      });
-    }
+    // Fetch total number of posts and the posts themselves
+    const [totalPosts, posts] = await Promise.all([
+      Post.countDocuments(), // Count of total posts in the DB
+      Post.find({ postType: { $in: ["post", "poles", "youtubeUrl"] } })
+        .sort({ createdAt: -1 }) // Sort by latest posts first
+        .skip(skip) // Pagination
+        .limit(limitNum) // Fetch only the number of posts based on the limit
+        .populate({
+          path: "userData",
+          select: "name profile", // Select sender's name & profile reference
+          populate: {
+            path: "profile",
+            select: "profilePhoto", // Fetch only profilePhoto and status
+          },
+        }),
+    ]);
+
+    // Determine if more posts are available for pagination
+    const hasMore = pageNum * limitNum < totalPosts;
 
     return res.status(200).json({
       success: true,
-      message: "Projects fetched successfully.",
-      data: projects,
-      hasMore: projects.length === limit, // Check if more projects are available
+      message: "Posts fetched successfully.",
+      data: posts,
+      hasMore, // More posts available if true
     });
   } catch (error) {
     console.error("Error fetching projects:", error);
@@ -337,37 +337,38 @@ export const getAllPostInSearch = async (req, res) => {
 
 export const getAllSkillSwapInSearch = async (req, res) => {
   try {
-    const { page = 1 } = req.query; // Get page number from query, default is 1
-    const limit = 10; // Limit 10 posts per request
-    const skip = (page - 1) * limit; // Calculate skip value
+    const { page = 1, limit = 10 } = req.query; // Default to fetching 10 posts per request
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
 
-    // Fetch 10 posts with postType "project"
-    const projects = await Post.find({ postType: "skillSwap" })
-      .sort({ createdAt: -1 }) // Sort by latest posts first
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: "userData",
-        select: "name profile", // Select user's name & profile reference
-        populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
-        },
-      })
-      .select("title description category startupStage createdAt userData"); // Only fetch required fields
+    // Calculate skip value based on the page and limit
+    const skip = (pageNum - 1) * limitNum;
 
-    if (!projects || projects.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No projects found",
-      });
-    }
+    // Fetch total number of posts and the posts themselves
+    const [totalPosts, posts] = await Promise.all([
+      Post.countDocuments(), // Count of total posts in the DB
+      Post.find({ postType: "skillSwap" })
+        .sort({ createdAt: -1 }) // Sort by latest posts first
+        .skip(skip) // Pagination
+        .limit(limitNum) // Fetch only the number of posts based on the limit
+        .populate({
+          path: "userData",
+          select: "name profile", // Select sender's name & profile reference
+          populate: {
+            path: "profile",
+            select: "profilePhoto", // Fetch only profilePhoto and status
+          },
+        }),
+    ]);
+
+    // Determine if more posts are available for pagination
+    const hasMore = pageNum * limitNum < totalPosts;
 
     return res.status(200).json({
       success: true,
-      message: "Projects fetched successfully.",
-      data: projects,
-      hasMore: projects.length === limit, // Check if more projects are available
+      message: "SkillSwap fetched successfully.",
+      data: posts,
+      hasMore, // More posts available if true
     });
   } catch (error) {
     console.error("Error fetching projects:", error);
