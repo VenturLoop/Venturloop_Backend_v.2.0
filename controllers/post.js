@@ -381,9 +381,12 @@ export const getAllSkillSwapInSearch = async (req, res) => {
 
 export const searchController = async (req, res) => {
   try {
-    const { query } = req.body; // The search query from the request body
+    const { query } = req.body;
 
-    // Create a regex pattern to make the search case-insensitive and partial match
+    if (!query || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
     const regex = new RegExp(query, "i");
 
     // Search Users by name
@@ -391,43 +394,39 @@ export const searchController = async (req, res) => {
 
     // Search Investors by name or investorType
     const investors = await Investor.find({
-      $or: [
-        { name: { $regex: regex } },
-        { investorType: { $regex: regex, $options: "i" } },
-      ],
+      $or: [{ name: { $regex: regex } }, { investorType: { $regex: regex } }],
     });
 
-    // Search Posts of type "project" by title
+    // Search Projects by title
     const projects = await Post.find({
       postType: "project",
       title: { $regex: regex },
     });
 
-    // Search Posts of type "post", "polls", "youtubeUrl" by description
+    // Search Posts of type "posts", "polls", "youtubeUrl" by description
     const posts = await Post.find({
       postType: { $in: ["posts", "polls", "youtubeUrl"] },
       description: { $regex: regex },
     });
 
-    // Search Posts of type "skillswap" by title
+    // Search SkillSwaps by title
     const skillSwapsByTitle = await Post.find({
       postType: "skillSwap",
       title: { $regex: regex },
     });
 
-    // Search skillSwap based on offeredSkills and requiredSkills
+    // Search SkillSwaps by offered and required skills
     const skillSwapsBySkills = await Post.find({
       postType: "skillSwap",
       $or: [
-        { "skillSwap.offeredSkills": { $regex: regex, $options: "i" } },
-        { "skillSwap.requiredSkills": { $regex: regex, $options: "i" } },
+        { "skillSwap.offeredSkills": { $elemMatch: { $regex: regex } } },
+        { "skillSwap.requiredSkills": { $elemMatch: { $regex: regex } } },
       ],
     });
 
-    // Combine skillSwaps from both title and skill matching
+    // Combine skillSwap results
     const skillSwaps = [...skillSwapsByTitle, ...skillSwapsBySkills];
 
-    // Return the filtered data
     return res.status(200).json({
       users,
       investors,
@@ -436,8 +435,10 @@ export const searchController = async (req, res) => {
       skillSwaps,
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Server error" });
+    console.error("Search Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
 
