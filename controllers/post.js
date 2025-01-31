@@ -275,27 +275,10 @@ export const getAllProjectInSearch = async (req, res) => {
       });
     }
 
-    // Format data to return only required fields
-    const formattedProjects = projects.map((project) => ({
-      title: project.title,
-      description: project.description,
-      category: project.category,
-      startupStage: project.startupStage,
-      createdAt: project.createdAt,
-      user: project.userData
-        ? {
-            name: project.userData.name,
-            profilePhoto: project.userData.profile
-              ? project.userData.profile.profilePhoto
-              : null,
-          }
-        : null,
-    }));
-
     return res.status(200).json({
       success: true,
       message: "Projects fetched successfully.",
-      data: formattedProjects,
+      data: projects,
       hasMore: projects.length === limit, // Check if more projects are available
     });
   } catch (error) {
@@ -337,27 +320,10 @@ export const getAllPostInSearch = async (req, res) => {
       });
     }
 
-    // Format data to return only required fields
-    const formattedPost = projects.map((project) => ({
-      title: project.title,
-      description: project.description,
-      category: project.category,
-      startupStage: project.startupStage,
-      createdAt: project.createdAt,
-      user: project.userData
-        ? {
-            name: project.userData.name,
-            profilePhoto: project.userData.profile
-              ? project.userData.profile.profilePhoto
-              : null,
-          }
-        : null,
-    }));
-
     return res.status(200).json({
       success: true,
       message: "Projects fetched successfully.",
-      data: formattedPost,
+      data: projects,
       hasMore: projects.length === limit, // Check if more projects are available
     });
   } catch (error) {
@@ -397,27 +363,10 @@ export const getAllSkillSwapInSearch = async (req, res) => {
       });
     }
 
-    // Format data to return only required fields
-    const formattedProjects = projects.map((project) => ({
-      title: project.title,
-      description: project.description,
-      category: project.category,
-      startupStage: project.startupStage,
-      createdAt: project.createdAt,
-      user: project.userData
-        ? {
-            name: project.userData.name,
-            profilePhoto: project.userData.profile
-              ? project.userData.profile.profilePhoto
-              : null,
-          }
-        : null,
-    }));
-
     return res.status(200).json({
       success: true,
       message: "Projects fetched successfully.",
-      data: formattedProjects,
+      data: projects,
       hasMore: projects.length === limit, // Check if more projects are available
     });
   } catch (error) {
