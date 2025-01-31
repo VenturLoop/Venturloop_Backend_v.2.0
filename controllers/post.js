@@ -412,7 +412,7 @@ export const searchController = async (req, res) => {
     // Search Investors by name or investorType
     const investors = await Investor.find({
       $or: [{ name: { $regex: regex } }, { investorType: { $regex: regex } }],
-    });
+    }).select("name image investorType");
 
     // Search Projects by title
     const projects = await Post.find({
