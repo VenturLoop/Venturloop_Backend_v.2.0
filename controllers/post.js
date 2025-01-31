@@ -418,19 +418,46 @@ export const searchController = async (req, res) => {
     const projects = await Post.find({
       postType: "project",
       title: { $regex: regex },
-    });
+    })
+      .sort({ createdAt: -1 }) // Sort by latest posts first
+      .populate({
+        path: "userData",
+        select: "name profile", // Select sender's name & profile reference
+        populate: {
+          path: "profile",
+          select: "profilePhoto", // Fetch only profilePhoto and status
+        },
+      });
 
     // Search Posts of type "posts", "polls", "youtubeUrl" by description
     const posts = await Post.find({
       postType: { $in: ["posts", "polls", "youtubeUrl"] },
       description: { $regex: regex },
-    });
+    })
+      .sort({ createdAt: -1 }) // Sort by latest posts first
+      .populate({
+        path: "userData",
+        select: "name profile", // Select sender's name & profile reference
+        populate: {
+          path: "profile",
+          select: "profilePhoto", // Fetch only profilePhoto and status
+        },
+      });
 
     // Search SkillSwaps by title
     const skillSwapsByTitle = await Post.find({
       postType: "skillSwap",
       title: { $regex: regex },
-    });
+    })
+      .sort({ createdAt: -1 }) // Sort by latest posts first
+      .populate({
+        path: "userData",
+        select: "name profile", // Select sender's name & profile reference
+        populate: {
+          path: "profile",
+          select: "profilePhoto", // Fetch only profilePhoto and status
+        },
+      });
 
     // Search SkillSwaps by offered and required skills
     const skillSwapsBySkills = await Post.find({
@@ -439,7 +466,16 @@ export const searchController = async (req, res) => {
         { "skillSwap.offeredSkills": { $elemMatch: { $regex: regex } } },
         { "skillSwap.requiredSkills": { $elemMatch: { $regex: regex } } },
       ],
-    });
+    })
+      .sort({ createdAt: -1 }) // Sort by latest posts first
+      .populate({
+        path: "userData",
+        select: "name profile", // Select sender's name & profile reference
+        populate: {
+          path: "profile",
+          select: "profilePhoto", // Fetch only profilePhoto and status
+        },
+      });
 
     // Combine skillSwap results
     const skillSwaps = [...skillSwapsByTitle, ...skillSwapsBySkills];
