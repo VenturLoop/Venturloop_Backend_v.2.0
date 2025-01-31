@@ -82,7 +82,7 @@ export const getUserSearchFeed = async (req, res) => {
     const formattedUsers = users
       .filter((user) => user.profile)
       .map((user) => ({
-        userName: user.userName,
+        name: user.name,
         status: user.profile.status,
         profilePhoto: user.profile.profilePhoto,
       }));
