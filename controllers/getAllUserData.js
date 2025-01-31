@@ -76,7 +76,9 @@ export const getUserSearchFeed = async (req, res) => {
       })
       .select("name")
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .select("name")
+      .lean(); // Convert Mongoose documents to plain objects for better performance
 
     // Filter and format response
     const formattedUsers = users

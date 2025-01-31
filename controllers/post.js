@@ -389,8 +389,17 @@ export const searchController = async (req, res) => {
 
     const regex = new RegExp(query, "i");
 
-    // Search Users by name
-    const users = await UserModel.find({ name: { $regex: regex } });
+    const users = await UserModel.find({ name: { $regex: regex } })
+      .populate({
+        path: "profile",
+        select: "status profilePhoto",
+        match: {
+          status: { $exists: true, $ne: null },
+          profilePhoto: { $exists: true, $ne: null },
+        },
+      })
+      .select("name")
+      .lean(); // Convert Mongoose documents to plain objects for better performance
 
     // Search Investors by name or investorType
     const investors = await Investor.find({
