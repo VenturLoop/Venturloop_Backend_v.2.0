@@ -379,6 +379,68 @@ export const getAllSkillSwapInSearch = async (req, res) => {
   }
 };
 
+export const searchController = async (req, res) => {
+  try {
+    const { query } = req.body; // The search query from the request body
+
+    // Create a regex pattern to make the search case-insensitive and partial match
+    const regex = new RegExp(query, "i");
+
+    // Search Users by name
+    const users = await UserModel.find({ name: { $regex: regex } });
+
+    // Search Investors by name or investorType
+    const investors = await Investor.find({
+      $or: [
+        { name: { $regex: regex } },
+        { investorType: { $regex: regex, $options: "i" } },
+      ],
+    });
+
+    // Search Posts of type "project" by title
+    const projects = await Post.find({
+      postType: "project",
+      title: { $regex: regex },
+    });
+
+    // Search Posts of type "post", "polls", "youtubeUrl" by description
+    const posts = await Post.find({
+      postType: { $in: ["posts", "polls", "youtubeUrl"] },
+      description: { $regex: regex },
+    });
+
+    // Search Posts of type "skillswap" by title
+    const skillSwapsByTitle = await Post.find({
+      postType: "skillSwap",
+      title: { $regex: regex },
+    });
+
+    // Search skillSwap based on offeredSkills and requiredSkills
+    const skillSwapsBySkills = await Post.find({
+      postType: "skillSwap",
+      $or: [
+        { "skillSwap.offeredSkills": { $regex: regex, $options: "i" } },
+        { "skillSwap.requiredSkills": { $regex: regex, $options: "i" } },
+      ],
+    });
+
+    // Combine skillSwaps from both title and skill matching
+    const skillSwaps = [...skillSwapsByTitle, ...skillSwapsBySkills];
+
+    // Return the filtered data
+    return res.status(200).json({
+      users,
+      investors,
+      projects,
+      posts,
+      skillSwaps,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 // Apply for a Role
 export const applyForRole = async (req, res) => {
   const { postId, userId, role, whyJoin, expertise } = req.body;

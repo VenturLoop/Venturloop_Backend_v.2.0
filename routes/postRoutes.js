@@ -37,6 +37,7 @@ import {
   getAllProjectInSearch,
   getAllPostInSearch,
   getAllSkillSwapInSearch,
+  searchController,
 } from "../controllers/post.js";
 
 const router = express.Router();
@@ -144,5 +145,7 @@ router.get("/search-project", getAllProjectInSearch); //new
 router.get("/search-post", getAllPostInSearch); //new
 
 router.get("/search-skillswap", getAllSkillSwapInSearch); //new
+
+router.post("/search-engine", searchController);
 
 export default router;
