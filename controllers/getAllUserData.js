@@ -74,16 +74,16 @@ export const getUserSearchFeed = async (req, res) => {
           profilePhoto: { $exists: true, $ne: null },
         },
       })
-      .select("name")
+      .select("name") // Fetch only the name field from UserModel
       .skip(skip)
       .limit(limit)
-      .select("name")
-      .lean(); // Convert Mongoose documents to plain objects for better performance
+      .lean(); // Convert Mongoose documents to plain JavaScript objects for better performance
 
-    // Filter and format response
+    // Filter users with profiles and format the response
     const formattedUsers = users
       .filter((user) => user.profile)
       .map((user) => ({
+        id: user._id, // Include user ID
         name: user.name,
         status: user.profile.status,
         profilePhoto: user.profile.profilePhoto,
@@ -103,6 +103,7 @@ export const getUserSearchFeed = async (req, res) => {
     });
   }
 };
+
 
 // Fetch all users
 export const getAllUsers = async (req, res) => {

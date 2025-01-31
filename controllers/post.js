@@ -389,6 +389,7 @@ export const searchController = async (req, res) => {
 
     const regex = new RegExp(query, "i");
 
+    // Search Users with transformed data
     const users = await UserModel.find({ name: { $regex: regex } })
       .populate({
         path: "profile",
@@ -398,8 +399,15 @@ export const searchController = async (req, res) => {
           profilePhoto: { $exists: true, $ne: null },
         },
       })
-      .select("name")
-      .lean(); // Convert Mongoose documents to plain objects for better performance
+      .select("_id name")
+      .lean();
+
+    const transformedUsers = users.map((user) => ({
+      _id: user._id,
+      name: user.name,
+      profilePhoto: user.profile?.profilePhoto || null,
+      status: user.profile?.status || null,
+    }));
 
     // Search Investors by name or investorType
     const investors = await Investor.find({
@@ -437,7 +445,7 @@ export const searchController = async (req, res) => {
     const skillSwaps = [...skillSwapsByTitle, ...skillSwapsBySkills];
 
     return res.status(200).json({
-      users,
+      users: transformedUsers, // Returning transformed user data
       investors,
       projects,
       posts,
