@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import ConnectedUsers from "../models/connectedUsers.js";
 import Connection from "../models/connection.js";
 import UserModel from "../models/user.js";
+import Message from "../models/message.js";
+
 
 export const sendConnectionRequest = async (req, res) => {
   const { senderId } = req.params; // Assuming senderId is set in the authenticate middleware
@@ -287,9 +289,17 @@ export const removeConnection = async (req, res) => {
       { new: true }
     );
 
+    // Delete all messages between the two users
+    await Message.deleteMany({
+      $or: [
+        { senderId: userId, recipientId: connectedUserId },
+        { senderId: connectedUserId, recipientId: userId },
+      ],
+    });
+
     return res.status(200).json({
       success: true,
-      message: "Connection removed successfully.",
+      message: "Connection removed and messages deleted successfully.",
     });
   } catch (error) {
     console.error("Error removing connection:", error);
@@ -299,6 +309,7 @@ export const removeConnection = async (req, res) => {
     });
   }
 };
+
 
 // Get list of received invitations
 export const getReceivedInvitations = async (req, res) => {
