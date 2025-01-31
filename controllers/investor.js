@@ -122,8 +122,12 @@ export const getInvestorProfile = async (req, res) => {
 // controllers/investorController.js
 export const getAllInvestors = async (req, res) => {
   try {
-    // Fetch all investors from the database
-    const investors = await Investor.find();
+    const { page = 1 } = req.query; // Get page number from query, default is 1
+    const limit = 12; // Limit 12 investors per request
+    const skip = (page - 1) * limit; // Calculate skip value
+
+    // Fetch 12 investors with pagination
+    const investors = await Investor.find().skip(skip).limit(limit);
 
     if (!investors || investors.length === 0) {
       return res.status(404).json({
@@ -132,10 +136,45 @@ export const getAllInvestors = async (req, res) => {
       });
     }
 
-    // Respond with the list of investors
     return res.status(200).json({
       success: true,
-      investors, // Return the list of investor profiles
+      message: "Investors fetched successfully.",
+      data: investors,
+      hasMore: investors.length === limit, // Check if more investors are available
+    });
+  } catch (error) {
+    console.error("Error fetching investors:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getAllInvestorInSearch = async (req, res) => {
+  try {
+    const { page = 1 } = req.query; // Get page number from query, default is 1
+    const limit = 12; // Limit 12 investors per request
+    const skip = (page - 1) * limit; // Calculate skip value
+
+    // Fetch 12 investors with only name, image, and investorType
+    const investors = await Investor.find()
+      .select("name image investorType")
+      .skip(skip)
+      .limit(limit);
+
+    if (!investors || investors.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No investors found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Investors fetched successfully.",
+      data: investors,
+      hasMore: investors.length === limit, // Check if more investors are available
     });
   } catch (error) {
     console.error("Error fetching investors:", error);

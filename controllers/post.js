@@ -247,6 +247,188 @@ export const getFeedPosts = async (req, res) => {
   }
 };
 
+export const getAllProjectInSearch = async (req, res) => {
+  try {
+    const { page = 1 } = req.query; // Get page number from query, default is 1
+    const limit = 10; // Limit 10 posts per request
+    const skip = (page - 1) * limit; // Calculate skip value
+
+    // Fetch 10 posts with postType "project"
+    const projects = await Post.find({ postType: "project" })
+      .sort({ createdAt: -1 }) // Sort by latest posts first
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "userData",
+        select: "name profile", // Select user's name & profile reference
+        populate: {
+          path: "profile", // Nested populate for profile details
+          select: "profilePhoto", // Fetch only profilePhoto
+        },
+      })
+      .select("title description category startupStage createdAt userData"); // Only fetch required fields
+
+    if (!projects || projects.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No projects found",
+      });
+    }
+
+    // Format data to return only required fields
+    const formattedProjects = projects.map((project) => ({
+      title: project.title,
+      description: project.description,
+      category: project.category,
+      startupStage: project.startupStage,
+      createdAt: project.createdAt,
+      user: project.userData
+        ? {
+            name: project.userData.name,
+            profilePhoto: project.userData.profile
+              ? project.userData.profile.profilePhoto
+              : null,
+          }
+        : null,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "Projects fetched successfully.",
+      data: formattedProjects,
+      hasMore: projects.length === limit, // Check if more projects are available
+    });
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getAllPostInSearch = async (req, res) => {
+  try {
+    const { page = 1 } = req.query; // Get page number from query, default is 1
+    const limit = 10; // Limit 10 posts per request
+    const skip = (page - 1) * limit; // Calculate skip value
+
+    // Fetch 10 posts with postType "project"
+    const projects = await Post.find({
+      postType: { $in: ["post", "poles", "youtubeUrl"] },
+    })
+      .sort({ createdAt: -1 }) // Sort by latest posts first
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "userData",
+        select: "name profile", // Select user's name & profile reference
+        populate: {
+          path: "profile", // Nested populate for profile details
+          select: "profilePhoto", // Fetch only profilePhoto
+        },
+      })
+      .select("title description postType createdAt userData videoUrl"); // Only fetch required fields
+
+    if (!projects || projects.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No projects found",
+      });
+    }
+
+    // Format data to return only required fields
+    const formattedPost = projects.map((project) => ({
+      title: project.title,
+      description: project.description,
+      category: project.category,
+      startupStage: project.startupStage,
+      createdAt: project.createdAt,
+      user: project.userData
+        ? {
+            name: project.userData.name,
+            profilePhoto: project.userData.profile
+              ? project.userData.profile.profilePhoto
+              : null,
+          }
+        : null,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "Projects fetched successfully.",
+      data: formattedPost,
+      hasMore: projects.length === limit, // Check if more projects are available
+    });
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getAllSkillSwapInSearch = async (req, res) => {
+  try {
+    const { page = 1 } = req.query; // Get page number from query, default is 1
+    const limit = 10; // Limit 10 posts per request
+    const skip = (page - 1) * limit; // Calculate skip value
+
+    // Fetch 10 posts with postType "project"
+    const projects = await Post.find({ postType: "skillSwap" })
+      .sort({ createdAt: -1 }) // Sort by latest posts first
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "userData",
+        select: "name profile", // Select user's name & profile reference
+        populate: {
+          path: "profile", // Nested populate for profile details
+          select: "profilePhoto", // Fetch only profilePhoto
+        },
+      })
+      .select("title description category startupStage createdAt userData"); // Only fetch required fields
+
+    if (!projects || projects.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No projects found",
+      });
+    }
+
+    // Format data to return only required fields
+    const formattedProjects = projects.map((project) => ({
+      title: project.title,
+      description: project.description,
+      category: project.category,
+      startupStage: project.startupStage,
+      createdAt: project.createdAt,
+      user: project.userData
+        ? {
+            name: project.userData.name,
+            profilePhoto: project.userData.profile
+              ? project.userData.profile.profilePhoto
+              : null,
+          }
+        : null,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "Projects fetched successfully.",
+      data: formattedProjects,
+      hasMore: projects.length === limit, // Check if more projects are available
+    });
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Apply for a Role
 export const applyForRole = async (req, res) => {
   const { postId, userId, role, whyJoin, expertise } = req.body;

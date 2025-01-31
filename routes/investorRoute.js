@@ -7,6 +7,7 @@ import {
   getAllInvestors,
   filterInvestors,
   getInvestorCount,
+  getAllInvestorInSearch,
 } from "../controllers/investor.js";
 
 const router = express.Router();
@@ -22,6 +23,8 @@ router.put("/update-investor/:id", updateInvestorProfile);
 router.delete("/delete-investor/:id", deleteInvestorProfile);
 
 router.post("/filter-investors", filterInvestors);
+
+router.get("/search-investors", getAllInvestorInSearch);
 
 router.get("/investor-count", getInvestorCount); // Route to get total investor count
 

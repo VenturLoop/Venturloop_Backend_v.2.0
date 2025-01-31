@@ -34,6 +34,9 @@ import {
   myskillSwapPost,
   getUserPollSelection,
   votePollOption,
+  getAllProjectInSearch,
+  getAllPostInSearch,
+  getAllSkillSwapInSearch,
 } from "../controllers/post.js";
 
 const router = express.Router();
@@ -135,5 +138,11 @@ router.get("/my-skillSwap/:userId", myskillSwapPost); //new  (in myprofile)
 router.post("/:postId/vote/:pollOptionId/:userId", votePollOption); //new
 
 router.get("/:postId/user-vote/:userId", getUserPollSelection); //new
+
+router.get("/search-project", getAllProjectInSearch); //new
+
+router.get("/search-post", getAllPostInSearch); //new
+
+router.get("/search-skillswap", getAllSkillSwapInSearch); //new
 
 export default router;

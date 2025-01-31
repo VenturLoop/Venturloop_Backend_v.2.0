@@ -21,7 +21,7 @@ export const getCofoundersFeed = async (req, res) => {
     // Fetch 6 verified users with complete profiles
     const users = await UserModel.find({
       isVerified: true,
-      // isDeleted: false,
+      isDeleted: false,
       _id: { $nin: excludedUserIds },
     })
       .populate({
@@ -51,6 +51,53 @@ export const getCofoundersFeed = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve users feed",
+    });
+  }
+};
+
+export const getUserSearchFeed = async (req, res) => {
+  try {
+    const { page = 1 } = req.query; // Get page number from query, default is 1
+    const limit = 12; // Limit 12 users per request
+    const skip = (page - 1) * limit; // Calculate skip value
+
+    // Fetch 12 verified users with complete profiles
+    const users = await UserModel.find({
+      isVerified: true,
+      isDeleted: false,
+    })
+      .populate({
+        path: "profile",
+        select: "status profilePhoto",
+        match: {
+          status: { $exists: true, $ne: null },
+          profilePhoto: { $exists: true, $ne: null },
+        },
+      })
+      .select("userName")
+      .skip(skip)
+      .limit(limit);
+
+    // Filter and format response
+    const formattedUsers = users
+      .filter((user) => user.profile)
+      .map((user) => ({
+        userName: user.userName,
+        status: user.profile.status,
+        profilePhoto: user.profile.profilePhoto,
+      }));
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully.",
+      data: formattedUsers,
+      hasMore: formattedUsers.length === limit, // Check if more users are available
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve users",
     });
   }
 };
@@ -269,12 +316,10 @@ export const getInvestorsByUserId = async (req, res) => {
     });
 
     if (!savedProfile || savedProfile.savedInvestorIds.length === 0) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "No investors found for the given User ID.",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "No investors found for the given User ID.",
+      });
     }
 
     return res.status(200).json({

@@ -39,6 +39,7 @@ import {
   getAllUsers,
   getUserCount,
   getCofoundersFeed,
+  getUserSearchFeed,
 } from "../controllers/getAllUserData.js";
 
 const router = express.Router();
@@ -54,6 +55,8 @@ router.get("/users", getAllUsers); //admin only
 router.get("/users/count", getUserCount); //admin only
 
 router.post("/profiles/:userId/save/cofounder", addCofounderSavedProfile); // save co-founder profile
+
+router.get("/search-user-feed", getUserSearchFeed); // new new
 
 router.post("/profiles/:userId/save/investor", addInvestorSavedProfile); // save Investor profile
 
