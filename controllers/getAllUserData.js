@@ -74,7 +74,7 @@ export const getUserSearchFeed = async (req, res) => {
           profilePhoto: { $exists: true, $ne: null },
         },
       })
-      .select("userName")
+      .select("name")
       .skip(skip)
       .limit(limit);
 
