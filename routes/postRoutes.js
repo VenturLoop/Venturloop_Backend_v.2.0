@@ -38,6 +38,8 @@ import {
   getAllPostInSearch,
   getAllSkillSwapInSearch,
   searchController,
+  checkUserLikedPost,
+  checkUserSavedPost,
 } from "../controllers/post.js";
 
 const router = express.Router();
@@ -147,5 +149,9 @@ router.get("/search-post", getAllPostInSearch); //new
 router.get("/search-skillswap", getAllSkillSwapInSearch); //new
 
 router.post("/search-engine", searchController);
+
+router.get("/post/:postId/like/:userId", checkUserLikedPost);
+
+router.get("/user/:userId/saved-post/:postId", checkUserSavedPost);
 
 export default router;

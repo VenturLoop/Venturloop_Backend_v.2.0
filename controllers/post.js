@@ -1,6 +1,7 @@
 import ConnectedUsers from "../models/connectedUsers.js";
 import Investor from "../models/investor.js";
 import Post from "../models/post.js";
+import SavedProfile from "../models/savedProfile.js";
 import UserModel from "../models/user.js";
 
 export const createPost = async (req, res) => {
@@ -1219,13 +1220,35 @@ export const checkUserLikedPost = async (req, res) => {
     // Find the post by ID
     const post = await Post.findById(postId);
     if (!post) {
-      return res.status(404).json({ success: false, message: "Post not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found" });
     }
 
     // Check if userId exists in the likes.users array
     const isLiked = post.likes.users.includes(userId);
 
     return res.status(200).json({ success: true, liked: isLiked });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Controller to check if a user has saved a post
+export const checkUserSavedPost = async (req, res) => {
+  try {
+    const { userId, postId } = req.params;
+
+    // Find the saved profile for the user
+    const savedProfile = await SavedProfile.findOne({ userId });
+    if (!savedProfile) {
+      return res.status(200).json({ success: true, saved: false });
+    }
+
+    // Check if the postId exists in the savedPostIds array
+    const isSaved = savedProfile.savedPostIds.includes(postId);
+
+    return res.status(200).json({ success: true, saved: isSaved });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
