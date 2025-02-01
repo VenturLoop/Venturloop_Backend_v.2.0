@@ -1212,6 +1212,25 @@ export const getPopularUsers = async (req, res) => {
   }
 };
 
+export const checkUserLikedPost = async (req, res) => {
+  try {
+    const { postId, userId } = req.params;
+
+    // Find the post by ID
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, message: "Post not found" });
+    }
+
+    // Check if userId exists in the likes.users array
+    const isLiked = post.likes.users.includes(userId);
+
+    return res.status(200).json({ success: true, liked: isLiked });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const searchUsers = async (req, res) => {
   try {
     const { query } = req.query;
