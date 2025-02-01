@@ -111,14 +111,42 @@ export const getUserProjectPosts = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name, status, and profile reference
+        select: "name profile", // Select sender's name and profile reference
         populate: {
           path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto and status
+          select: "profilePhoto", // Fetch only profilePhoto
         },
-      }); // Sort by latest
+      })
+      .lean(); // Convert to plain JavaScript object for easier manipulation
 
-    res.status(200).json({ success: true, posts: userProjectPosts });
+    // Map through each project post to add likeCount, saveCount, and commentUsers
+    const updatedPosts = userProjectPosts.map((post) => {
+      const { likes, saves, comments } = post;
+
+      // Count likes and saves
+      const likeCount = likes ? likes.count : 0;
+      const saveCount = saves ? saves.length : 0;
+
+      // Get the first 3 comment users with profile photos
+      const commentUsers = comments
+        .slice(0, 3) // Get the first 3 comments
+        .map((comment) => {
+          return {
+            userId: comment.userId,
+            profilePhoto: comment.userId.profile?.profilePhoto || "", // Ensure profile photo is available
+          };
+        });
+
+      // Return updated post with likeCount, saveCount, and commentUsers
+      return {
+        ...post,
+        likeCount,
+        saveCount,
+        commentUsers,
+      };
+    });
+
+    res.status(200).json({ success: true, posts: updatedPosts });
   } catch (error) {
     console.error(error);
     res
@@ -133,19 +161,47 @@ export const getUserOtherPosts = async (req, res) => {
 
     const userOtherPosts = await Post.find({
       userData: userId,
-      postType: { $in: ["posts", "poles", "youtubeUrl"] },
+      postType: { $in: ["posts", "poles", "youtubeUrl"] }, // Fetch only "posts", "poles", "youtubeUrl"
     })
       .sort({ createdAt: -1 })
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name, status, and profile reference
+        select: "name profile", // Select sender's name and profile reference
         populate: {
           path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto and status
+          select: "profilePhoto", // Fetch only profilePhoto
         },
-      }); // Sort by latest
+      })
+      .lean(); // Convert to plain JavaScript object for easier manipulation
 
-    res.status(200).json({ success: true, posts: userOtherPosts });
+    // Map through each post to add likeCount, saveCount, and commentUsers
+    const updatedPosts = userOtherPosts.map((post) => {
+      const { likes, saves, comments } = post;
+
+      // Count likes and saves
+      const likeCount = likes ? likes.count : 0;
+      const saveCount = saves ? saves.length : 0;
+
+      // Get the first 3 comment users with profile photos
+      const commentUsers = comments
+        .slice(0, 3) // Get the first 3 comments
+        .map((comment) => {
+          return {
+            userId: comment.userId,
+            profilePhoto: comment.userId.profile?.profilePhoto || "", // Ensure profile photo is available
+          };
+        });
+
+      // Return updated post with likeCount, saveCount, and commentUsers
+      return {
+        ...post,
+        likeCount,
+        saveCount,
+        commentUsers,
+      };
+    });
+
+    res.status(200).json({ success: true, posts: updatedPosts });
   } catch (error) {
     console.error(error);
     res
@@ -230,14 +286,20 @@ export const getFeedPosts = async (req, res) => {
         },
       });
 
+    // Transform the newPosts to only include profilePhoto of the user
+    const transformedNewPosts = newPosts.map((post) => ({
+      ...post.toObject(),
+      userProfilePhoto: post.userData.profile.profilePhoto, // Adding only profilePhoto
+    }));
+
     res.status(200).json({
       success: true,
       posts: {
         feed: posts,
-        newPosts: newPosts, // New posts to be displayed at the top
+        newPosts: transformedNewPosts, // New posts with only profilePhoto
       },
       page: pageNum,
-      totalPosts, // Return the total count of posts for the client to use in pagination
+      totalPosts: posts.length,
       hasMore, // Indicate whether there are more posts to load
     });
   } catch (error) {
@@ -793,39 +855,63 @@ export const getSavedProjectsByUserId = async (req, res) => {
       });
     }
 
-    // Query to find posts where the userId is in the saves array
-    const savedPosts = await Post.find({
-      saves: userId, // Match the userId in the 'saves' array
-      postType: "project",
-    })
-      .sort({ createdAt: -1 }) // Sort by the most recent posts
-      .populate({
-        path: "userData",
-        select: "name profile", // Select sender's name, status, and profile reference
-        populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto and status
-        },
-      })
-      .lean(); // Convert to plain JavaScript object for easier manipulation
+    // Fetch saved profile by userId to get savedPostIds
+    const savedProfile = await SavedProfile.findOne({ userId })
+      .select("savedPostIds") // Select only savedPostIds
+      .exec();
 
-    if (savedPosts.length === 0) {
+    // If no saved profile is found, return an error
+    if (!savedProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "Saved profile not found for this user.",
+      });
+    }
+
+    // Get savedPostIds from the profile
+    const { savedPostIds } = savedProfile;
+
+    // If no saved post IDs are found, return a message
+    if (savedPostIds.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No saved posts found for this user.",
       });
     }
 
+    // Query to find posts where the userId is in the saves array and postType is "project"
+    const savedProjects = await Post.find({
+      _id: { $in: savedPostIds }, // Match posts with savedPostIds
+      postType: "project", // Only fetch project posts
+    })
+      .sort({ createdAt: -1 }) // Sort by the most recent posts
+      .populate({
+        path: "userData",
+        select: "name profile", // Select sender's name and profile reference
+        populate: {
+          path: "profile", // Nested populate for profile details
+          select: "profilePhoto", // Fetch only profilePhoto
+        },
+      }) // Populate userData (creator's name, profileImage)
+      .lean(); // Convert to plain JavaScript object for easier manipulation
+
+    if (savedProjects.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No saved projects found for this user.",
+      });
+    }
+
     // Returning the saved posts
     res.status(200).json({
       success: true,
-      posts: savedPosts,
+      posts: savedProjects,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: "Server error. Unable to fetch saved posts.",
+      message: "Server error. Unable to fetch saved projects.",
     });
   }
 };
@@ -841,18 +927,42 @@ export const getSavedPostsByUserId = async (req, res) => {
       });
     }
 
-    // Query to find posts where the userId is in the saves array
+    // Fetch saved profile by userId to get savedPostIds
+    const savedProfile = await SavedProfile.findOne({ userId })
+      .select("savedPostIds") // Select only savedPostIds
+      .exec();
+
+    // If no saved profile is found, return an error
+    if (!savedProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "Saved profile not found for this user.",
+      });
+    }
+
+    // Get savedPostIds from the profile
+    const { savedPostIds } = savedProfile;
+
+    // If no saved post IDs are found, return a message
+    if (savedPostIds.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No saved posts found for this user.",
+      });
+    }
+
+    // Query to find posts where the userId is in the saves array and postType is "post", "poles", or "youtubeUrl"
     const savedPosts = await Post.find({
-      saves: userId, // Match the userId in the 'saves' array
-      postType: { $in: ["post", "poles", "youtubeUrl"] },
+      _id: { $in: savedPostIds }, // Match posts with savedPostIds
+      postType: { $in: ["post", "poles", "youtubeUrl"] }, // Only posts, poles, and youtubeUrl
     })
       .sort({ createdAt: -1 }) // Sort by the most recent posts
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name, status, and profile reference
+        select: "name profile", // Select sender's name, profile reference
         populate: {
           path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto and status
+          select: "profilePhoto", // Fetch only profilePhoto
         },
       }) // Populate userData (creator's name, profileImage)
       .lean(); // Convert to plain JavaScript object for easier manipulation
@@ -1105,31 +1215,62 @@ export const getConnectedUserFeedPosts = async (req, res) => {
         select: "name profile", // Select sender's name, status, and profile reference
         populate: {
           path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto and status
+          select: "profilePhoto", // Fetch only profilePhoto
         },
-      }); // Limit the number of posts per page
+      }) // Limit the number of posts per page
+      .lean(); // Convert to plain JavaScript object for easier manipulation
 
-    // Fetch the 5 newest posts from connected users
+    // Add likeCount and saveCount to each post and get the first three comment users' profilePhoto
+    for (const post of posts) {
+      post.likeCount = post.likes.count; // Add like count
+      post.saveCount = post.saves.length; // Add save count
+
+      // Add the first 3 comment users' profilePhoto
+      post.commentUsers = post.comments
+        .slice(0, 3) // Limit to the first three comments
+        .map((comment) => comment.userId) // Extract userId from comments
+        .filter(Boolean); // Filter out any null or undefined userId
+
+      // Populate the profile photos for comment users
+      const commentUsersData = await User.find({
+        _id: { $in: post.commentUsers },
+      }).select("profile.profilePhoto"); // Select profilePhoto for the comment users
+
+      post.commentUsers = commentUsersData.map(
+        (user) => user.profile.profilePhoto
+      );
+    }
+
+    const hasMore = pageNum * limitNum < totalPosts;
+
+    // Fetch the 5 newest posts from connected users and only return profilePhoto of the user
     const newPosts = await Post.find({ userData: { $in: connectedUserIds } })
       .sort({ createdAt: -1 })
       .limit(5)
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name, status, and profile reference
+        select: "profile", // Only fetch the profile field
         populate: {
           path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto and status
+          select: "profilePhoto", // Fetch only profilePhoto
         },
       });
+
+    // Transform the newPosts to only include profilePhoto of the user
+    const transformedNewPosts = newPosts.map((post) => ({
+      ...post.toObject(),
+      userProfilePhoto: post.userData.profile.profilePhoto, // Adding only profilePhoto
+    }));
 
     res.status(200).json({
       success: true,
       posts: {
         feed: posts,
-        newPosts: newPosts, // New posts to be displayed at the top
+        newPosts: transformedNewPosts, // New posts with only profilePhoto
       },
       page: pageNum,
       totalPosts: posts.length,
+      hasMore: hasMore,
     });
   } catch (error) {
     console.error("Error fetching feed posts:", error);
@@ -1704,10 +1845,32 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
       return res.status(400).json({ message: "User ID is required." });
     }
 
-    // Find all posts where postType is "skillSwap" and the userId is in the saves array
+    // Fetch the SavedProfile document by userId
+    const savedProfile = await SavedProfile.findOne({ userId })
+      .select("savedPostIds") // Select only savedPostIds
+      .exec();
+
+    // If no saved profile is found, return an error
+    if (!savedProfile) {
+      return res
+        .status(404)
+        .json({ message: "Saved profile not found for this user." });
+    }
+
+    // Get the savedPostIds from the profile
+    const { savedPostIds } = savedProfile;
+
+    // If no saved post IDs are found, return a message
+    if (savedPostIds.length === 0) {
+      return res.status(404).json({
+        message: "No saved posts found for this user.",
+      });
+    }
+
+    // Fetch all posts where postType is "skillSwap" and postId is in savedPostIds
     const posts = await Post.find({
-      postType: "skillSwap", // Only skillSwap posts
-      saves: userId, // Check if the user has saved the post
+      _id: { $in: savedPostIds }, // Match posts with savedPostIds
+      postType: "skillSwap", // Only fetch skillSwap posts
     })
       .populate({
         path: "userData", // Populate userData field to get post creator's data
@@ -1715,14 +1878,14 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
         populate: {
           path: "profile", // Populate profile details
           select: "profilePhoto", // Select only 'profilePhoto' field
-        }, // Select name and profilePhoto only
+        },
       })
       .exec();
 
-    // If no posts are found, return a message
+    // If no skillSwap posts are found, return a message
     if (posts.length === 0) {
       return res.status(404).json({
-        message: "No saved skill swap posts found for this user.",
+        message: "No skill swap posts found for this user.",
       });
     }
 
@@ -1769,8 +1932,33 @@ export const myskillSwapPost = async (req, res) => {
       });
     }
 
-    // Return the posts with populated userData
-    return res.status(200).json({ success: true, posts: posts });
+    // Prepare the posts data with likeCount, saveCount, and commentUsers
+    const postsWithAdditionalData = posts.map((post) => {
+      // Extract the first three comment users' profile photos
+      const commentUsers = post.comments.slice(0, 3).map((comment) => {
+        return comment.userId.profile
+          ? comment.userId.profile.profilePhoto
+          : null;
+      });
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        likeCount: post.likes.count,
+        saveCount: post.savesCount,
+        commentUsers, // Include the profile photos of the first three commenters
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        userData: post.userData, // Populated userData (name, profile)
+      };
+    });
+
+    // Return the posts with the additional data
+    return res.status(200).json({
+      success: true,
+      posts: postsWithAdditionalData,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
