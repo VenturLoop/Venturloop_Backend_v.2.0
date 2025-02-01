@@ -930,7 +930,12 @@ export const blockUser = async (req, res) => {
 
 export const checkBlockStatus = async (req, res) => {
   try {
-    const { userId, blockerId } = req.params; // User to check block status for (from params)
+    const { userId, blockerId } = req.params; // Extract userId and blockerId from params
+
+    // Ensure that userId and blockerId are provided in the request
+    if (!userId || !blockerId) {
+      return res.status(400).json({ message: "User ID and Blocker ID are required" });
+    }
 
     // Fetch both users
     const [userToCheck, blocker] = await Promise.all([
@@ -964,6 +969,7 @@ export const checkBlockStatus = async (req, res) => {
       .json({ message: `Server error, please try again later ${err}` });
   }
 };
+
 
 // Unblock a user
 export const unblockUser = async (req, res) => {
