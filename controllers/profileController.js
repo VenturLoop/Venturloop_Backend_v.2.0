@@ -940,20 +940,21 @@ export const checkBlockStatus = async (req, res) => {
     }
 
     // Fetch the block entry from the database
+    // Fetch the block entry from the database for both directions (blocker -> blocked OR blocked -> blocker)
     const existingBlock = await BlockModel.findOne({
-      blocker: blockerId,
-      blocked: userId,
+      $or: [
+        { blocker: blockerId, blocked: userId },
+        { blocker: userId, blocked: blockerId },
+      ],
     });
 
     if (existingBlock) {
       // If a block exists, return block: true and the block details
-      return res
-        .status(200)
-        .json({
-          block: true,
-          data: existingBlock,
-          blockedAt: existingBlock.blockedAt,
-        });
+      return res.status(200).json({
+        block: true,
+        data: existingBlock,
+        blockedAt: existingBlock.blockedAt,
+      });
     } else {
       // If no block exists, return block: false
       return res.status(200).json({ block: false });
