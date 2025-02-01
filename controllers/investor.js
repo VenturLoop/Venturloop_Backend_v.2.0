@@ -135,7 +135,7 @@ export const getAllInvestors = async (req, res) => {
         message: "No investors found",
       });
     }
-
+ 
     return res.status(200).json({
       success: true,
       message: "Investors fetched successfully.",

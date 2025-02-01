@@ -928,6 +928,43 @@ export const blockUser = async (req, res) => {
   }
 };
 
+export const checkBlockStatus = async (req, res) => {
+  try {
+    const { userId, blockerId } = req.params; // User to check block status for (from params)
+
+    // Fetch both users
+    const [userToCheck, blocker] = await Promise.all([
+      UserModel.findById(userId),
+      UserModel.findById(blockerId),
+    ]);
+
+    if (!userToCheck) {
+      return res.status(404).json({ message: "User to check not found" });
+    }
+
+    if (!blocker) {
+      return res.status(404).json({ message: "Blocker user not found" });
+    }
+
+    // Check if the user is blocked
+    const existingBlock = await BlockModel.findOne({
+      blocker: blocker._id,
+      blocked: userToCheck._id,
+    });
+
+    if (existingBlock) {
+      return res.status(200).json({ block: true });
+    } else {
+      return res.status(200).json({ block: false });
+    }
+  } catch (err) {
+    console.error("Error checking block status:", err.message);
+    res
+      .status(500)
+      .json({ message: `Server error, please try again later ${err}` });
+  }
+};
+
 // Unblock a user
 export const unblockUser = async (req, res) => {
   try {

@@ -28,6 +28,7 @@ import {
   savePushToken,
   saveViewer,
   getViewers,
+  checkBlockStatus,
 } from "../controllers/profileController.js";
 import {
   getCoFoundersByUserId,
@@ -117,5 +118,8 @@ router.post("/save-push-token/:userId", savePushToken); //new
 router.post("/save-viewer", saveViewer); //new
 
 router.get("/get-viewers/:userId", getViewers); // new
+
+router.get('/check-block-status/:userId/:blockerId', checkBlockStatus);//new
+
 
 export default router;
