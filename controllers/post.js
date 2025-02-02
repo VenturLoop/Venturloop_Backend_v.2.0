@@ -256,22 +256,74 @@ export const getFeedPosts = async (req, res) => {
     // Calculate the total number of posts
     const totalPosts = await Post.countDocuments(); // Total count of posts in the DB
 
-    // Fetch the latest posts and the newest 5 posts at once
+    // Fetch paginated posts
     const posts = await Post.find()
-      .sort({ createdAt: -1 }) // Sort by latest posts first
-      .skip((pageNum - 1) * limitNum) // Pagination
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name, status, and profile reference
+        select: "name profile",
         populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto and status
+          path: "profile",
+          select: "profilePhoto",
+        },
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
         },
       });
 
     // Check if there are more posts to load
     const hasMore = pageNum * limitNum < totalPosts;
+    // Transform posts to include likes count and first three unique commenters' profile photos
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
 
     // Fetch the 5 newest posts to show on top of the feed
     const newPosts = await Post.find()
@@ -288,14 +340,14 @@ export const getFeedPosts = async (req, res) => {
 
     // Transform the newPosts to only include profilePhoto of the user
     const transformedNewPosts = newPosts.map((post) => ({
-      ...post.toObject(),
+      _id: post._id,
       userProfilePhoto: post.userData.profile.profilePhoto, // Adding only profilePhoto
     }));
 
     res.status(200).json({
       success: true,
       posts: {
-        feed: posts,
+        feed: transformedPosts,
         newPosts: transformedNewPosts, // New posts with only profilePhoto
       },
       page: pageNum,
@@ -1183,6 +1235,9 @@ export const getConnectedUserFeedPosts = async (req, res) => {
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
 
+    // Calculate the total number of posts
+    const totalPosts = await Post.countDocuments(); // Total count of posts in the DB
+
     // Find connected users from the ConnectedUsers model
     const userConnections = await ConnectedUsers.findOne({ userId }).select(
       "connections.user"
@@ -1207,70 +1262,101 @@ export const getConnectedUserFeedPosts = async (req, res) => {
 
     // Fetch posts from connected users
     const posts = await Post.find({ userData: { $in: connectedUserIds } })
-      .sort({ createdAt: -1 }) // Latest posts first
-      .skip((pageNum - 1) * limitNum) // Pagination
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name, status, and profile reference
+        select: "name profile",
         populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
+          path: "profile",
+          select: "profilePhoto",
         },
-      }) // Limit the number of posts per page
-      .lean(); // Convert to plain JavaScript object for easier manipulation
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
+      });
 
-    // Add likeCount and saveCount to each post and get the first three comment users' profilePhoto
-    for (const post of posts) {
-      post.likeCount = post.likes.count; // Add like count
-      post.saveCount = post.saves.length; // Add save count
-
-      // Add the first 3 comment users' profilePhoto
-      post.commentUsers = post.comments
-        .slice(0, 3) // Limit to the first three comments
-        .map((comment) => comment.userId) // Extract userId from comments
-        .filter(Boolean); // Filter out any null or undefined userId
-
-      // Populate the profile photos for comment users
-      const commentUsersData = await User.find({
-        _id: { $in: post.commentUsers },
-      }).select("profile.profilePhoto"); // Select profilePhoto for the comment users
-
-      post.commentUsers = commentUsersData.map(
-        (user) => user.profile.profilePhoto
-      );
-    }
-
+    // Check if there are more posts to load
     const hasMore = pageNum * limitNum < totalPosts;
+    // Transform posts to include likes count and first three unique commenters' profile photos
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
 
-    // Fetch the 5 newest posts from connected users and only return profilePhoto of the user
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
+
+    // Fetch the 5 newest posts to show on top of the feed
     const newPosts = await Post.find({ userData: { $in: connectedUserIds } })
       .sort({ createdAt: -1 })
       .limit(5)
       .populate({
         path: "userData",
-        select: "profile", // Only fetch the profile field
+        select: "name profile", // Select sender's name, status, and profile reference
         populate: {
           path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
+          select: "profilePhoto", // Fetch only profilePhoto and status
         },
       });
 
     // Transform the newPosts to only include profilePhoto of the user
     const transformedNewPosts = newPosts.map((post) => ({
-      ...post.toObject(),
+      _id: post._id,
       userProfilePhoto: post.userData.profile.profilePhoto, // Adding only profilePhoto
     }));
 
     res.status(200).json({
       success: true,
       posts: {
-        feed: posts,
+        feed: transformedPosts,
         newPosts: transformedNewPosts, // New posts with only profilePhoto
       },
       page: pageNum,
       totalPosts: posts.length,
-      hasMore: hasMore,
+      hasMore, // Indicate whether there are more posts to load
     });
   } catch (error) {
     console.error("Error fetching feed posts:", error);
