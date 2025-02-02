@@ -982,33 +982,74 @@ export const getSavedProjectsByUserId = async (req, res) => {
     }
 
     // Query to find posts where the userId is in the saves array and postType is "project"
-    const savedProjects = await Post.find({
+    const posts = await Post.find({
       _id: { $in: savedPostIds }, // Match posts with savedPostIds
       postType: "project", // Only fetch project posts
     })
-      .sort({ createdAt: -1 }) // Sort by the most recent posts
+      .sort({ createdAt: -1 })
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name and profile reference
+        select: "name profile",
         populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
+          path: "profile",
+          select: "profilePhoto",
         },
-      }) // Populate userData (creator's name, profileImage)
-      .lean(); // Convert to plain JavaScript object for easier manipulation
-
-    if (savedProjects.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No saved projects found for this user.",
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
       });
-    }
 
-    // Returning the saved posts
-    res.status(200).json({
-      success: true,
-      posts: savedProjects,
+    // Map through each project post to add likeCount, saveCount, and commentUsers
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
     });
+
+    res.status(200).json({ success: true, posts: transformedPosts });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -1054,33 +1095,74 @@ export const getSavedPostsByUserId = async (req, res) => {
     }
 
     // Query to find posts where the userId is in the saves array and postType is "post", "poles", or "youtubeUrl"
-    const savedPosts = await Post.find({
+    const posts = await Post.find({
       _id: { $in: savedPostIds }, // Match posts with savedPostIds
       postType: { $in: ["post", "poles", "youtubeUrl"] }, // Only posts, poles, and youtubeUrl
     })
-      .sort({ createdAt: -1 }) // Sort by the most recent posts
+      .sort({ createdAt: -1 })
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name, profile reference
+        select: "name profile",
         populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
+          path: "profile",
+          select: "profilePhoto",
         },
-      }) // Populate userData (creator's name, profileImage)
-      .lean(); // Convert to plain JavaScript object for easier manipulation
-
-    if (savedPosts.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No saved posts found for this user.",
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
       });
-    }
 
-    // Returning the saved posts
-    res.status(200).json({
-      success: true,
-      posts: savedPosts,
+    // Map through each project post to add likeCount, saveCount, and commentUsers
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
     });
+
+    res.status(200).json({ success: true, posts: transformedPosts });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -1945,25 +2027,70 @@ export const fetchSkillSwapPostsByUser = async (req, res) => {
       postType: "skillSwap", // Filter posts by 'skillSwap' type
       "applyUsersOnSkillSwap.applicantUser": userId, // Match userId with applicantUser in applyUsersOnSkillSwap array
     })
+      .sort({ createdAt: -1 })
       .populate({
-        path: "userData", // Populate the applicantUser field
-        select: "name profile", // Select only 'name' and 'profile'
+        path: "userData",
+        select: "name profile",
         populate: {
-          path: "profile", // Populate profile details
-          select: "profilePhoto", // Select only 'profilePhoto' field
+          path: "profile",
+          select: "profilePhoto",
         },
       })
-      .exec();
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
+      });
 
-    // If no posts are found, return a message
-    if (posts.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No skill swap posts found for this user." });
-    }
+    // Map through each project post to add likeCount, saveCount, and commentUsers
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
 
-    // Return the posts along with populated user data
-    return res.status(200).json({ success: true, posts });
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
+
+    res.status(200).json({ success: true, posts: transformedPosts });
   } catch (error) {
     console.error(error);
     return res
@@ -2008,12 +2135,13 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
       postType: "skillSwap", // Only skillSwap posts
       userData: userId, // Match posts where userData is the userId
     })
+      .sort({ createdAt: -1 })
       .populate({
-        path: "userData", // Populate userData field
-        select: "name profile", // Select name and profilePhoto from the user
+        path: "userData",
+        select: "name profile",
         populate: {
-          path: "profile", // Populate the profile sub-document in userData
-          select: "profilePhoto", // Ensure profilePhoto is populated
+          path: "profile",
+          select: "profilePhoto",
         },
       })
       .populate({
@@ -2023,61 +2151,54 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
           path: "profile",
           select: "profilePhoto",
         },
-      })
-      .exec();
-
-    // If no posts are found, return a message
-    if (posts.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No skill swap posts found for this user.",
       });
-    }
 
-    // Prepare the posts data with likeCount, saveCount, and commentUsers
-    const postsWithAdditionalData = posts.map((post) => {
-      // Extract the first three comment users' profile photos
-      // Extract the first three unique comment users' profile photos
-      const seenUsers = new Set();
-      const commentUsers = [];
+    // Map through each project post to add likeCount, saveCount, and commentUsers
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
 
       for (const comment of post.comments) {
-        if (commentUsers.length >= 3) break;
-        if (
-          comment.userId.profile &&
-          !seenUsers.has(comment.userId._id.toString())
-        ) {
-          commentUsers.push({
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
             profileImage: comment.userId.profile.profilePhoto,
           });
-          seenUsers.add(comment.userId._id.toString());
         }
+        if (firstThreeUniqueComments.length >= 3) break;
       }
 
       return {
         _id: post._id,
         title: post.title,
         description: post.description,
-        likeCount: post.likes.count,
-        saveCount: post.savesCount,
-        commentUsers, // Include the profile photos of the first three commenters
-        createdAt: post.createdAt,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
         postType: post.postType,
-        updatedAt: post.updatedAt,
+        users: post.users,
         skillSwap: post.skillSwap,
-        userData: post.userData, // Populated userData (name, profile)
-        offeredSkills: post.skillSwap.offeredSkills, // Include offered skills
-        requiredSkills: post.skillSwap.requiredSkills, // Include required skills
-        commentsCount: post.commentsCount,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
         applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
       };
     });
 
-    // Return the posts with the additional data
-    return res.status(200).json({
-      success: true,
-      posts: postsWithAdditionalData,
-    });
+    res.status(200).json({ success: true, posts: transformedPosts });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -2102,11 +2223,11 @@ export const myskillSwapPost = async (req, res) => {
       userData: userId, // Match posts where userData is the userId
     })
       .populate({
-        path: "userData", // Populate userData field
-        select: "name profile", // Select name and profilePhoto from the user
+        path: "userData",
+        select: "name profile",
         populate: {
-          path: "profile", // Populate the profile sub-document in userData
-          select: "profilePhoto", // Ensure profilePhoto is populated
+          path: "profile",
+          select: "profilePhoto",
         },
       })
       .populate({
@@ -2118,58 +2239,52 @@ export const myskillSwapPost = async (req, res) => {
         },
       })
       .exec();
-
-    // If no posts are found, return a message
-    if (posts.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No skill swap posts found for this user.",
-      });
-    }
-
-    // Prepare the posts data with likeCount, saveCount, and commentUsers
-    const postsWithAdditionalData = posts.map((post) => {
-      // Extract the first three unique comment users' profile photos
-      const seenUsers = new Set();
-      const commentUsers = [];
+    // Map through each project post to add likeCount, saveCount, and commentUsers
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
 
       for (const comment of post.comments) {
-        if (commentUsers.length >= 3) break;
-        if (
-          comment.userId.profile &&
-          !seenUsers.has(comment.userId._id.toString())
-        ) {
-          commentUsers.push({
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
             profileImage: comment.userId.profile.profilePhoto,
           });
-          seenUsers.add(comment.userId._id.toString());
         }
+        if (firstThreeUniqueComments.length >= 3) break;
       }
 
       return {
         _id: post._id,
         title: post.title,
         description: post.description,
-        likeCount: post.likes.count,
-        saveCount: post.savesCount,
-        commentUsers, // Include the profile photos of the first three commenters
-        createdAt: post.createdAt,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
         postType: post.postType,
-        updatedAt: post.updatedAt,
+        users: post.users,
         skillSwap: post.skillSwap,
-        userData: post.userData, // Populated userData (name, profile)
-        offeredSkills: post.skillSwap.offeredSkills, // Include offered skills
-        requiredSkills: post.skillSwap.requiredSkills, // Include required skills
-        commentsCount: post.commentsCount,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
         applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
       };
     });
 
-    // Return the posts with the additional data
-    return res.status(200).json({
-      success: true,
-      posts: postsWithAdditionalData,
-    });
+    res.status(200).json({ success: true, posts: transformedPosts });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
