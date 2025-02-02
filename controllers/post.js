@@ -1869,28 +1869,79 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
 
     // Fetch all posts where postType is "skillSwap" and postId is in savedPostIds
     const posts = await Post.find({
-      _id: { $in: savedPostIds }, // Match posts with savedPostIds
-      postType: "skillSwap", // Only fetch skillSwap posts
+      postType: "skillSwap", // Only skillSwap posts
+      userData: userId, // Match posts where userData is the userId
     })
       .populate({
-        path: "userData", // Populate userData field to get post creator's data
-        select: "name profile", // Select only 'name' and 'profile'
+        path: "userData", // Populate userData field
+        select: "name profile", // Select name and profilePhoto from the user
         populate: {
-          path: "profile", // Populate profile details
-          select: "profilePhoto", // Select only 'profilePhoto' field
+          path: "profile", // Populate the profile sub-document in userData
+          select: "profilePhoto", // Ensure profilePhoto is populated
+        },
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
         },
       })
       .exec();
 
-    // If no skillSwap posts are found, return a message
+    // If no posts are found, return a message
     if (posts.length === 0) {
       return res.status(404).json({
+        success: false,
         message: "No skill swap posts found for this user.",
       });
     }
 
-    // Return the posts with populated userData
-    return res.status(200).json({ success: true, posts });
+    // Prepare the posts data with likeCount, saveCount, and commentUsers
+    const postsWithAdditionalData = posts.map((post) => {
+      // Extract the first three comment users' profile photos
+      // Extract the first three unique comment users' profile photos
+      const seenUsers = new Set();
+      const commentUsers = [];
+
+      for (const comment of post.comments) {
+        if (commentUsers.length >= 3) break;
+        if (
+          comment.userId.profile &&
+          !seenUsers.has(comment.userId._id.toString())
+        ) {
+          commentUsers.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+          seenUsers.add(comment.userId._id.toString());
+        }
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        likeCount: post.likes.count,
+        saveCount: post.savesCount,
+        commentUsers, // Include the profile photos of the first three commenters
+        createdAt: post.createdAt,
+        postType: post.postType,
+        updatedAt: post.updatedAt,
+        skillSwap: post.skillSwap,
+        userData: post.userData, // Populated userData (name, profile)
+        offeredSkills: post.skillSwap.offeredSkills, // Include offered skills
+        requiredSkills: post.skillSwap.requiredSkills, // Include required skills
+        commentsCount: post.commentsCount,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+      };
+    });
+
+    // Return the posts with the additional data
+    return res.status(200).json({
+      success: true,
+      posts: postsWithAdditionalData,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
