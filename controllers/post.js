@@ -264,28 +264,72 @@ export const getPostDetails = async (req, res) => {
   try {
     const { postId } = req.params; // Get postId from route parameters
 
-    const postDetails = await Post.findById(postId)
+    const posts = await Post.findById(postId)
+      .sort({ createdAt: -1 })
       .sort({ createdAt: -1 })
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name, status, and profile reference
+        select: "name profile",
         populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto and status
+          path: "profile",
+          select: "profilePhoto",
         },
-      }); // Sort by latest
-
-    if (!postDetails) {
-      return res.status(404).json({
-        success: false,
-        message: "Post not found.",
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
       });
-    }
 
-    res.status(200).json({
-      success: true,
-      post: postDetails,
+    // Map through each project post to add likeCount, saveCount, and commentUsers
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
     });
+
+    res.status(200).json({ success: true, posts: transformedPosts });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -435,16 +479,66 @@ export const getAllProjectInSearch = async (req, res) => {
             path: "profile",
             select: "profilePhoto", // Fetch only profilePhoto and status
           },
+        })
+        .populate({
+          path: "comments.userId", // Populate user profile from comment userId
+          select: "name profile",
+          populate: {
+            path: "profile",
+            select: "profilePhoto",
+          },
         }),
     ]);
 
     // Determine if more posts are available for pagination
     const hasMore = pageNum * limitNum < totalPosts;
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
 
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
     return res.status(200).json({
       success: true,
       message: "Projects fetched successfully.",
-      data: posts,
+      data: transformedPosts,
       hasMore, // More posts available if true
     });
   } catch (error) {
@@ -523,16 +617,68 @@ export const getAllSkillSwapInSearch = async (req, res) => {
             path: "profile",
             select: "profilePhoto", // Fetch only profilePhoto and status
           },
+        })
+        .populate({
+          path: "comments.userId", // Populate user profile from comment userId
+          select: "name profile",
+          populate: {
+            path: "profile",
+            select: "profilePhoto",
+          },
         }),
     ]);
 
     // Determine if more posts are available for pagination
     const hasMore = pageNum * limitNum < totalPosts;
 
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
+
     return res.status(200).json({
       success: true,
       message: "SkillSwap fetched successfully.",
-      data: posts,
+      data: transformedPosts,
       hasMore, // More posts available if true
     });
   } catch (error) {
@@ -592,7 +738,59 @@ export const searchController = async (req, res) => {
           path: "profile",
           select: "profilePhoto", // Fetch only profilePhoto and status
         },
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
       });
+
+    const transformedProjects = projects.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
 
     // Search Posts of type "posts", "polls", "youtubeUrl" by description
     const posts = await Post.find({
@@ -607,7 +805,59 @@ export const searchController = async (req, res) => {
           path: "profile",
           select: "profilePhoto", // Fetch only profilePhoto and status
         },
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
       });
+
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
 
     // Search SkillSwaps by title
     const skillSwapsByTitle = await Post.find({
@@ -621,6 +871,14 @@ export const searchController = async (req, res) => {
         populate: {
           path: "profile",
           select: "profilePhoto", // Fetch only profilePhoto and status
+        },
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
         },
       });
 
@@ -640,17 +898,69 @@ export const searchController = async (req, res) => {
           path: "profile",
           select: "profilePhoto", // Fetch only profilePhoto and status
         },
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
       });
 
     // Combine skillSwap results
     const skillSwaps = [...skillSwapsByTitle, ...skillSwapsBySkills];
 
+    const transformedSkillSwaps = skillSwaps.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
+
     return res.status(200).json({
       users: transformedUsers, // Returning transformed user data
       investors,
-      projects,
-      posts,
-      skillSwaps,
+      projects: transformedProjects,
+      posts: transformedPosts,
+      skillSwaps: transformedSkillSwaps,
     });
   } catch (error) {
     console.error("Search Error:", error);
