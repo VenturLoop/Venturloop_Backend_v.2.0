@@ -104,7 +104,6 @@ export const getUserSearchFeed = async (req, res) => {
   }
 };
 
-
 // Fetch all users
 export const getAllUsers = async (req, res) => {
   try {
@@ -257,6 +256,7 @@ export const addInvestorSavedProfile = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "An error occurred while saving the investor profile.",
+      error: error,
     });
   }
 };
