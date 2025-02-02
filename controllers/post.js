@@ -346,7 +346,6 @@ export const getPostDetails = async (req, res) => {
   }
 };
 
-
 // Function to get paginated posts
 // Function to get feed posts with infinite scroll and new posts at the top
 export const getFeedPosts = async (req, res) => {
@@ -2206,13 +2205,10 @@ export const acceptSkillSwap = async (req, res) => {
         .json({ message: "Post ID and User ID are required." });
     }
 
-    // Find the post by ID
+    // Find the post and application to accept in one go
     const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ message: "Post not found." });
-    }
+    if (!post) return res.status(404).json({ message: "Post not found." });
 
-    // Find the application to accept in the 'applyUsersOnSkillSwap' array
     const application = post.applyUsersOnSkillSwap.find(
       (app) => app.applicantUser.toString() === userId
     );
@@ -2223,35 +2219,26 @@ export const acceptSkillSwap = async (req, res) => {
 
     // Change the application status to "Accepted"
     application.status = "Accepted";
+    await post.save(); // Save the post with updated status
 
-    // Save the post with the updated application status
-    await post.save();
-
-    // Now add the users to the connections array in ConnectedUsers collection
+    // Ensure the user is connected
     let connectedUser = await ConnectedUsers.findOne({ userId });
 
     if (!connectedUser) {
-      // If the user doesn't have a connected user list, create one
-      connectedUser = new ConnectedUsers({
-        userId,
-        connections: [],
-      });
+      connectedUser = new ConnectedUsers({ userId, connections: [] });
     }
 
-    // Add the other user (the user who posted the post) to the connections array
-    const otherUserId = post.userData; // The creator of the post (the one who accepted the skill swap)
+    const otherUserId = post.userData; // The user who posted the skill swap
 
-    // Avoid adding the same user twice
+    // Avoid adding duplicate connections
     if (
       !connectedUser.connections.some(
         (conn) => conn.user.toString() === otherUserId.toString()
       )
     ) {
       connectedUser.connections.push({ user: otherUserId });
+      await connectedUser.save(); // Save the new connection
     }
-
-    // Save the connected user information
-    await connectedUser.save();
 
     return res.status(200).json({
       success: true,
@@ -2282,21 +2269,18 @@ export const declineSkillSwap = async (req, res) => {
       return res.status(404).json({ message: "Post not found." });
     }
 
-    // Find the application to decline by userId in the skillSwap array
+    // Find the application to decline
     const applicationIndex = post.applyUsersOnSkillSwap.findIndex(
       (app) => app.applicantUser.toString() === userId
     );
 
-    // If application doesn't exist
     if (applicationIndex === -1) {
       return res.status(404).json({ message: "Application not found." });
     }
 
     // Remove the application from the array
     post.applyUsersOnSkillSwap.splice(applicationIndex, 1);
-
-    // Save the post with the updated applications
-    await post.save();
+    await post.save(); // Save the post after updating the application list
 
     return res.status(200).json({
       success: true,
@@ -2342,7 +2326,7 @@ export const fetchSkillSwapApplications = async (req, res) => {
       postId: post._id,
       applyUsersOnSkillSwap: post.applyUsersOnSkillSwap.map((application) => ({
         applicantUser: {
-          _id:application.applicantUser?._id,
+          _id: application.applicantUser?._id,
           name: application.applicantUser?.name,
           profilePhoto: application.applicantUser?.profile?.profilePhoto, // Access the profile photo safely
         },
