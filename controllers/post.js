@@ -104,49 +104,74 @@ export const getUserProjectPosts = async (req, res) => {
   try {
     const { userId } = req.params; // Get userId from route parameters
 
-    const userProjectPosts = await Post.find({
+    const posts = await Post.find({
       userData: userId,
       postType: "project",
     })
       .sort({ createdAt: -1 })
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name and profile reference
+        select: "name profile",
         populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
+          path: "profile",
+          select: "profilePhoto",
         },
       })
-      .lean(); // Convert to plain JavaScript object for easier manipulation
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
+      });
 
     // Map through each project post to add likeCount, saveCount, and commentUsers
-    const updatedPosts = userProjectPosts.map((post) => {
-      const { likes, saves, comments } = post;
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
 
-      // Count likes and saves
-      const likeCount = likes ? likes.count : 0;
-      const saveCount = saves ? saves.length : 0;
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
 
-      // Get the first 3 comment users with profile photos
-      const commentUsers = comments
-        .slice(0, 3) // Get the first 3 comments
-        .map((comment) => {
-          return {
-            userId: comment.userId,
-            profilePhoto: comment.userId.profile?.profilePhoto || "", // Ensure profile photo is available
-          };
-        });
-
-      // Return updated post with likeCount, saveCount, and commentUsers
       return {
-        ...post,
-        likeCount,
-        saveCount,
-        commentUsers,
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
       };
     });
 
-    res.status(200).json({ success: true, posts: updatedPosts });
+    res.status(200).json({ success: true, posts: transformedPosts });
   } catch (error) {
     console.error(error);
     res
@@ -159,49 +184,74 @@ export const getUserOtherPosts = async (req, res) => {
   try {
     const { userId } = req.params; // Get userId from route parameters
 
-    const userOtherPosts = await Post.find({
+    const posts = await Post.find({
       userData: userId,
       postType: { $in: ["posts", "poles", "youtubeUrl"] }, // Fetch only "posts", "poles", "youtubeUrl"
     })
       .sort({ createdAt: -1 })
       .populate({
         path: "userData",
-        select: "name profile", // Select sender's name and profile reference
+        select: "name profile",
         populate: {
-          path: "profile", // Nested populate for profile details
-          select: "profilePhoto", // Fetch only profilePhoto
+          path: "profile",
+          select: "profilePhoto",
         },
       })
-      .lean(); // Convert to plain JavaScript object for easier manipulation
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
+      });
 
-    // Map through each post to add likeCount, saveCount, and commentUsers
-    const updatedPosts = userOtherPosts.map((post) => {
-      const { likes, saves, comments } = post;
+    // Map through each project post to add likeCount, saveCount, and commentUsers
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
 
-      // Count likes and saves
-      const likeCount = likes ? likes.count : 0;
-      const saveCount = saves ? saves.length : 0;
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
 
-      // Get the first 3 comment users with profile photos
-      const commentUsers = comments
-        .slice(0, 3) // Get the first 3 comments
-        .map((comment) => {
-          return {
-            userId: comment.userId,
-            profilePhoto: comment.userId.profile?.profilePhoto || "", // Ensure profile photo is available
-          };
-        });
-
-      // Return updated post with likeCount, saveCount, and commentUsers
       return {
-        ...post,
-        likeCount,
-        saveCount,
-        commentUsers,
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
       };
     });
 
-    res.status(200).json({ success: true, posts: updatedPosts });
+    res.status(200).json({ success: true, posts: transformedPosts });
   } catch (error) {
     console.error(error);
     res
