@@ -266,9 +266,7 @@ export const getPostDetails = async (req, res) => {
   try {
     const { postId } = req.params; // Get postId from route parameters
 
-    const posts = await Post.findById(postId)
-      .sort({ createdAt: -1 })
-      .sort({ createdAt: -1 })
+    const post = await Post.findById(postId) // Find a single post by ID
       .populate({
         path: "userData",
         select: "name profile",
@@ -286,53 +284,59 @@ export const getPostDetails = async (req, res) => {
         },
       });
 
-    // Map through each project post to add likeCount, saveCount, and commentUsers
-    const transformedPosts = posts.map((post) => {
-      const uniqueCommenters = new Set();
-      const firstThreeUniqueComments = [];
+    // If no post is found, return an error
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found.",
+      });
+    }
 
-      for (const comment of post.comments) {
-        if (!uniqueCommenters.has(comment.userId._id.toString())) {
-          uniqueCommenters.add(comment.userId._id.toString());
-          firstThreeUniqueComments.push({
-            profileImage: comment.userId.profile.profilePhoto,
-          });
-        }
-        if (firstThreeUniqueComments.length >= 3) break;
+    // Extract unique comment users (first three unique)
+    const uniqueCommenters = new Set();
+    const firstThreeUniqueComments = [];
+
+    for (const comment of post.comments) {
+      if (!uniqueCommenters.has(comment.userId._id.toString())) {
+        uniqueCommenters.add(comment.userId._id.toString());
+        firstThreeUniqueComments.push({
+          profileImage: comment.userId.profile.profilePhoto,
+        });
       }
+      if (firstThreeUniqueComments.length >= 3) break;
+    }
 
-      return {
-        _id: post._id,
-        title: post.title,
-        description: post.description,
-        openRoles: post.openRoles,
-        teamMates: post.teamMates,
-        websiteLink: post.websiteLink,
-        category: post.category,
-        startupStage: post.startupStage,
-        startupDetails: post.startupDetails,
-        problemStatement: post.problemStatement,
-        marketDescription: post.marketDescription,
-        competition: post.competition,
-        userData: post.userData,
-        postType: post.postType,
-        users: post.users,
-        skillSwap: post.skillSwap,
-        polls: post.polls,
-        appliedUsers: post.appliedUsers,
-        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
-        createdAt: post.createdAt,
-        updatedAt: post.updatedAt,
-        __v: post.__v,
-        commentsCount: post.commentsCount,
-        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
-        likesCount: post.likes.count,
-        videoUrl: post.videoUrl,
-        commentUser: firstThreeUniqueComments,
-      };
-    });
+    // Transform post data
+    const transformedPost = {
+      _id: post._id,
+      title: post.title,
+      description: post.description,
+      openRoles: post.openRoles,
+      teamMates: post.teamMates,
+      websiteLink: post.websiteLink,
+      category: post.category,
+      startupStage: post.startupStage,
+      startupDetails: post.startupDetails,
+      problemStatement: post.problemStatement,
+      marketDescription: post.marketDescription,
+      competition: post.competition,
+      userData: post.userData,
+      postType: post.postType,
+      users: post.users,
+      skillSwap: post.skillSwap,
+      polls: post.polls,
+      appliedUsers: post.appliedUsers,
+      applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      __v: post.__v,
+      commentsCount: post.commentsCount,
+      userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo
+      likesCount: post.likes?.count || 0,
+      commentUser: firstThreeUniqueComments,
+    };
 
-    res.status(200).json({ success: true, posts: transformedPosts });
+    res.status(200).json({ success: true, post: transformedPost });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -341,6 +345,7 @@ export const getPostDetails = async (req, res) => {
     });
   }
 };
+
 
 // Function to get paginated posts
 // Function to get feed posts with infinite scroll and new posts at the top
