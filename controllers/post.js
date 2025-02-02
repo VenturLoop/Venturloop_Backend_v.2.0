@@ -159,6 +159,7 @@ export const getUserProjectPosts = async (req, res) => {
         users: post.users,
         skillSwap: post.skillSwap,
         polls: post.polls,
+        videoUrl:post.videoUrl,
         appliedUsers: post.appliedUsers,
         applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
         createdAt: post.createdAt,
@@ -247,6 +248,7 @@ export const getUserOtherPosts = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -325,6 +327,7 @@ export const getPostDetails = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -415,6 +418,7 @@ export const getFeedPosts = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -532,6 +536,7 @@ export const getAllProjectInSearch = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -671,6 +676,7 @@ export const getAllSkillSwapInSearch = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -788,6 +794,7 @@ export const searchController = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -855,6 +862,7 @@ export const searchController = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -951,6 +959,7 @@ export const searchController = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -1355,6 +1364,7 @@ export const getSavedProjectsByUserId = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -1468,6 +1478,7 @@ export const getSavedPostsByUserId = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -1767,6 +1778,7 @@ export const getConnectedUserFeedPosts = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -2396,6 +2408,7 @@ export const fetchSkillSwapPostsByUser = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -2504,6 +2517,7 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -2590,6 +2604,7 @@ export const myskillSwapPost = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        videoUrl:post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
     });
