@@ -1922,6 +1922,14 @@ export const myskillSwapPost = async (req, res) => {
           select: "profilePhoto", // Ensure profilePhoto is populated
         },
       })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
+      })
       .exec();
 
     // If no posts are found, return a message
@@ -1949,8 +1957,14 @@ export const myskillSwapPost = async (req, res) => {
         saveCount: post.savesCount,
         commentUsers, // Include the profile photos of the first three commenters
         createdAt: post.createdAt,
+        postType: post.postType,
         updatedAt: post.updatedAt,
+        skillSwap: post.skillSwap,
         userData: post.userData, // Populated userData (name, profile)
+        offeredSkills: post.skillSwap.offeredSkills, // Include offered skills
+        requiredSkills: post.skillSwap.requiredSkills, // Include required skills
+        commentsCount: post.commentsCount,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
       };
     });
 
