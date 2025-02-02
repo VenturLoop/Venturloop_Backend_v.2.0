@@ -2342,6 +2342,7 @@ export const fetchSkillSwapApplications = async (req, res) => {
       postId: post._id,
       applyUsersOnSkillSwap: post.applyUsersOnSkillSwap.map((application) => ({
         applicantUser: {
+          _id:application.applicantUser?._id,
           name: application.applicantUser?.name,
           profilePhoto: application.applicantUser?.profile?.profilePhoto, // Access the profile photo safely
         },
