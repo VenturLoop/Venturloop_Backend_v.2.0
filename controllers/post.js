@@ -1942,12 +1942,22 @@ export const myskillSwapPost = async (req, res) => {
 
     // Prepare the posts data with likeCount, saveCount, and commentUsers
     const postsWithAdditionalData = posts.map((post) => {
-      // Extract the first three comment users' profile photos
-      const commentUsers = post.comments.slice(0, 3).map((comment) => {
-        return comment.userId.profile
-          ? comment.userId.profile.profilePhoto
-          : null;
-      });
+      // Extract the first three unique comment users' profile photos
+      const seenUsers = new Set();
+      const commentUsers = [];
+
+      for (const comment of post.comments) {
+        if (commentUsers.length >= 3) break;
+        if (
+          comment.userId.profile &&
+          !seenUsers.has(comment.userId._id.toString())
+        ) {
+          commentUsers.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+          seenUsers.add(comment.userId._id.toString());
+        }
+      }
 
       return {
         _id: post._id,
