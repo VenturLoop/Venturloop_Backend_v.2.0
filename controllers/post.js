@@ -994,6 +994,13 @@ export const applyForRole = async (req, res) => {
       });
     }
 
+    if (!userId) {
+      return res.status(404).json({
+        success: false,
+        message: "userId not found.",
+      });
+    }
+
     // Check if the user has already applied for this role
     const existingApplication = post.appliedUsers.find(
       (application) =>
