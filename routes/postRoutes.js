@@ -155,6 +155,6 @@ router.get("/post/:postId/like/:userId", checkUserLikedPost);
 
 router.get("/user/:userId/saved-post/:postId", checkUserSavedPost);
 
-router.get("/feed-post/:postType", getPostTypeFeedPosts);
+router.get("  ", getPostTypeFeedPosts);
 
 export default router;

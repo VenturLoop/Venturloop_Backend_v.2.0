@@ -19,7 +19,6 @@ const SavedProfileSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Investor",
-        unique: true, // Ensures no duplicates
       },
     ],
     savedPostIds: [
