@@ -458,7 +458,7 @@ export const checkConnectionStatus = async (req, res) => {
     }
 
     // Check if a connection exists between the two users
-    const connection = await Connection.findOne({
+    const connection = await ConnectedUsers.findOne({
       $or: [
         { sender: senderId, receiver: receiverId },
         { sender: receiverId, receiver: senderId },
