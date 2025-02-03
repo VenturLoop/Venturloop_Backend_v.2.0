@@ -2723,3 +2723,128 @@ export const getUserPollSelection = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+
+export const getPostTypeFeedPosts = async (req, res) => {
+  try {
+    const { postType } = req.params; // Default to fetching 10 posts per request
+    const { page = 1, limit = 10 } = req.query; // Default to fetching 10 posts per request
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    // Define filter based on postType
+    let filter = {};
+    if (postType === "project") {
+      filter = { postType: "project" };
+    } else if (postType === "skillSwap") {
+      filter = { postType: "skillSwap" };
+    } else if (["poles", "youtubeUrl", "posts"].includes(postType)) {
+      filter = { postType: { $in: ["poles", "youtubeUrl", "posts"] } };
+    }
+    // Calculate the total number of posts
+    const totalPosts = await Post.countDocuments(); // Total count of posts in the DB
+
+    // Fetch paginated posts
+    const posts = await Post.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
+      .populate({
+        path: "userData",
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
+      })
+      .populate({
+        path: "comments.userId", // Populate user profile from comment userId
+        select: "name profile",
+        populate: {
+          path: "profile",
+          select: "profilePhoto",
+        },
+      });
+
+    // Check if there are more posts to load
+    const hasMore = pageNum * limitNum < totalPosts;
+    // Transform posts to include likes count and first three unique commenters' profile photos
+    const transformedPosts = posts.map((post) => {
+      const uniqueCommenters = new Set();
+      const firstThreeUniqueComments = [];
+
+      for (const comment of post.comments) {
+        if (!uniqueCommenters.has(comment.userId._id.toString())) {
+          uniqueCommenters.add(comment.userId._id.toString());
+          firstThreeUniqueComments.push({
+            profileImage: comment.userId.profile.profilePhoto,
+          });
+        }
+        if (firstThreeUniqueComments.length >= 3) break;
+      }
+
+      return {
+        _id: post._id,
+        title: post.title,
+        description: post.description,
+        openRoles: post.openRoles,
+        teamMates: post.teamMates,
+        websiteLink: post.websiteLink,
+        category: post.category,
+        startupStage: post.startupStage,
+        startupDetails: post.startupDetails,
+        problemStatement: post.problemStatement,
+        marketDescription: post.marketDescription,
+        competition: post.competition,
+        userData: post.userData,
+        postType: post.postType,
+        users: post.users,
+        skillSwap: post.skillSwap,
+        polls: post.polls,
+        appliedUsers: post.appliedUsers,
+        applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        __v: post.__v,
+        commentsCount: post.commentsCount,
+        userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
+        likesCount: post.likes.count,
+        commentUser: firstThreeUniqueComments,
+      };
+    });
+
+    // Fetch the 5 newest posts to show on top of the feed
+    const newPosts = await Post.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate({
+        path: "userData",
+        select: "name profile", // Select sender's name, status, and profile reference
+        populate: {
+          path: "profile", // Nested populate for profile details
+          select: "profilePhoto", // Fetch only profilePhoto and status
+        },
+      });
+
+    // Transform the newPosts to only include profilePhoto of the user
+    const transformedNewPosts = newPosts.map((post) => ({
+      _id: post._id,
+      userProfilePhoto: post.userData.profile.profilePhoto, // Adding only profilePhoto
+    }));
+
+    res.status(200).json({
+      success: true,
+      posts: {
+        feed: transformedPosts,
+        newPosts: transformedNewPosts, // New posts with only profilePhoto
+      },
+      page: pageNum,
+      totalPosts: posts.length,
+      hasMore, // Indicate whether there are more posts to load
+    });
+  } catch (error) {
+    console.error("Error fetching feed posts:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch posts." });
+  }
+};
