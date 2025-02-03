@@ -210,53 +210,53 @@ export const addCofounderSavedProfile = async (req, res) => {
   }
 };
 
-export const addInvestorSavedProfile = async (req, res) => {
-  const { userId } = req.params; // Current user's ID
-  const { savedInvestorId } = req.body; // ID of the investor to save
-
+export const addInvestorToSavedProfiles = async (req, res) => {
   try {
-    if (!savedInvestorId) {
+    const { userId, investorId } = req.params; // Get IDs from request params
+
+    if (!userId || !investorId) {
       return res.status(400).json({
         success: false,
-        message: "Please provide an investor profile to save.",
+        message: "User ID and Investor ID are required.",
       });
     }
 
-    // Check if the user already has a saved investor profile list
-    let existingProfile = await SavedProfile.findOne({ userId });
+    // Find existing saved profile for the user
+    let savedProfile = await SavedProfile.findOne({ userId });
 
-    if (existingProfile) {
-      // Check if the savedInvestorId is already in the list
-      if (existingProfile.savedInvestorIds.includes(savedInvestorId)) {
+    if (savedProfile) {
+      // Check if investorId is already saved
+      if (savedProfile.savedInvestorIds.includes(investorId)) {
         return res.status(409).json({
           success: false,
           message: "Investor profile is already saved.",
         });
       }
 
-      // Add the new savedInvestorId to the array
-      existingProfile.savedInvestorIds.push(savedInvestorId);
-      await existingProfile.save();
+      // Add investorId to savedInvestorIds array
+      savedProfile.savedInvestorIds.push(investorId);
+      await savedProfile.save();
     } else {
-      // Create a new saved profile document if none exists
-      existingProfile = new SavedProfile({
+      // Create new saved profile document if none exists
+      savedProfile = new SavedProfile({
         userId,
-        savedInvestorIds: [savedInvestorId],
+        savedInvestorIds: [investorId],
       });
 
-      await existingProfile.save();
+      await savedProfile.save();
     }
 
     return res.status(201).json({
       success: true,
       message: "Investor profile saved successfully.",
+      data: savedProfile,
     });
+
   } catch (error) {
     console.error("Error saving investor profile:", error);
     return res.status(500).json({
       success: false,
       message: "An error occurred while saving the investor profile.",
-      error: error,
     });
   }
 };

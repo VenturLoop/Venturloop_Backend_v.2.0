@@ -34,13 +34,13 @@ import {
   getCoFoundersByUserId,
   getInvestorsByUserId,
   addCofounderSavedProfile,
-  addInvestorSavedProfile,
   removeCoFounderProfile,
   removeInvestorProfile,
   getAllUsers,
   getUserCount,
   getCofoundersFeed,
   getUserSearchFeed,
+  addInvestorToSavedProfiles,
 } from "../controllers/getAllUserData.js";
 
 const router = express.Router();
@@ -59,7 +59,7 @@ router.post("/profiles/:userId/save/cofounder", addCofounderSavedProfile); // sa
 
 router.get("/search-user-feed", getUserSearchFeed); // new new
 
-router.post("/profiles/:userId/save/investor", addInvestorSavedProfile); // save Investor profile
+router.post("/save-investor/:userId/:investorId", addInvestorToSavedProfiles);
 
 router.get("/profiles/:userId/cofounders", getCoFoundersByUserId); //get co-founders by user
 
