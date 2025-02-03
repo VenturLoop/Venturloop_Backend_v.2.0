@@ -4,7 +4,6 @@ import Connection from "../models/connection.js";
 import UserModel from "../models/user.js";
 import Message from "../models/message.js";
 
-
 export const sendConnectionRequest = async (req, res) => {
   const { senderId } = req.params; // Assuming senderId is set in the authenticate middleware
   const { receiverId } = req.body;
@@ -25,7 +24,23 @@ export const sendConnectionRequest = async (req, res) => {
       });
     }
 
-    // Check if a connection already exists between the sender and receiver
+    // Check if users are already connected
+    const senderConnectedData = await ConnectedUsers.findOne({
+      userId: senderId,
+    });
+    if (
+      senderConnectedData &&
+      senderConnectedData.connections.some(
+        (conn) => conn.user.toString() === receiverId
+      )
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: "You are already connected with this user.",
+      });
+    }
+
+    // Check if a connection request already exists
     const existingConnection = await Connection.findOne({
       $or: [
         { sender: senderId, receiver: receiverId },
@@ -36,8 +51,7 @@ export const sendConnectionRequest = async (req, res) => {
     if (existingConnection) {
       return res.status(409).json({
         success: false,
-        message:
-          "A connection request already exists between you and this user.",
+        message: "A connection request already exists.",
       });
     }
 
@@ -239,7 +253,6 @@ export const declineConnectionRequest = async (req, res) => {
   }
 };
 
-// TODO : error 500 ocured when connection
 export const removeConnection = async (req, res) => {
   const { userId } = req.params; // The user initiating the removal
   const { connectedUserId } = req.body; // The user being removed
@@ -309,7 +322,6 @@ export const removeConnection = async (req, res) => {
     });
   }
 };
-
 
 // Get list of received invitations
 export const getReceivedInvitations = async (req, res) => {
