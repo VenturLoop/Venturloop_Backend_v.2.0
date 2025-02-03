@@ -159,7 +159,7 @@ export const getUserProjectPosts = async (req, res) => {
         users: post.users,
         skillSwap: post.skillSwap,
         polls: post.polls,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         appliedUsers: post.appliedUsers,
         applyUsersOnSkillSwap: post.applyUsersOnSkillSwap,
@@ -249,7 +249,7 @@ export const getUserOtherPosts = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -424,7 +424,7 @@ export const getFeedPosts = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -543,7 +543,7 @@ export const getAllProjectInSearch = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -684,7 +684,7 @@ export const getAllSkillSwapInSearch = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -803,7 +803,7 @@ export const searchController = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -872,7 +872,7 @@ export const searchController = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -970,7 +970,7 @@ export const searchController = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -1396,7 +1396,7 @@ export const getSavedProjectsByUserId = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -1511,7 +1511,7 @@ export const getSavedPostsByUserId = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -1811,7 +1811,7 @@ export const getConnectedUserFeedPosts = async (req, res) => {
         __v: post.__v,
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         likesCount: post.likes.count,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
@@ -2429,7 +2429,7 @@ export const fetchSkillSwapPostsByUser = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -2539,7 +2539,7 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -2627,7 +2627,7 @@ export const myskillSwapPost = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
-        savesCount:post.savesCount,
+        savesCount: post.savesCount,
         videoUrl: post.videoUrl,
         commentUser: firstThreeUniqueComments,
       };
@@ -2724,7 +2724,6 @@ export const getUserPollSelection = async (req, res) => {
   }
 };
 
-
 export const getPostTypeFeedPosts = async (req, res) => {
   try {
     const { postType } = req.params; // Default to fetching 10 posts per request
@@ -2808,6 +2807,7 @@ export const getPostTypeFeedPosts = async (req, res) => {
         commentsCount: post.commentsCount,
         userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo,
         likesCount: post.likes.count,
+        savesCount: post.savesCount,
         commentUser: firstThreeUniqueComments,
       };
     });
@@ -2835,7 +2835,6 @@ export const getPostTypeFeedPosts = async (req, res) => {
       success: true,
       posts: {
         feed: transformedPosts,
-        newPosts: transformedNewPosts, // New posts with only profilePhoto
       },
       page: pageNum,
       totalPosts: posts.length,
