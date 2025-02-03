@@ -404,7 +404,7 @@ export const removeInvestorProfile = async (req, res) => {
     }
 
     // Find the saved profile by userId
-    const result = await savedProfile.findOneAndUpdate(
+    const result = await SavedProfile.findOneAndUpdate(
       { userId, savedInvestorIds: investorId }, // Match userId and the investorId in the array
       { $pull: { savedInvestorIds: investorId } }, // Use $pull to remove the investorId from the savedInvestorIds array
       { new: true } // Return the updated document
