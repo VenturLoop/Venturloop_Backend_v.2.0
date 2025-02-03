@@ -6,13 +6,11 @@ const SavedProfileSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // Ensures only one saved profile per user
     },
     savedUserIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        unique: true, // Ensures no duplicates
       },
     ],
     savedInvestorIds: [
@@ -25,7 +23,6 @@ const SavedProfileSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Post",
-        unique: true, // Ensures no duplicates
       },
     ],
     savedAt: {
@@ -35,13 +32,11 @@ const SavedProfileSchema = new mongoose.Schema(
     updatedAt: {
       type: Date,
       default: Date.now,
-      // Automatically update this field when the document is updated
     },
   },
   {
-    timestamps: { createdAt: "savedAt", updatedAt: "updatedAt" }, // Automatically manage the updatedAt field
+    timestamps: { createdAt: "savedAt", updatedAt: "updatedAt" },
   }
 );
-
 
 export default mongoose.model("SavedProfile", SavedProfileSchema);
