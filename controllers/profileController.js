@@ -1141,7 +1141,8 @@ export const deleteUserAccount = async (req, res) => {
 };
 
 export const savePushToken = async (req, res) => {
-  const { userId, pushToken } = req.body;
+  const { userId } = req.params;
+  const { pushToken } = req.body;
   if (!userId || !pushToken) {
     return res
       .status(400)
