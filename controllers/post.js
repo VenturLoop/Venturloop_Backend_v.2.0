@@ -2478,7 +2478,7 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
     // Fetch all posts where postType is "skillSwap" and postId is in savedPostIds
     const posts = await Post.find({
       postType: "skillSwap", // Only skillSwap posts
-      userData: userId, // Match posts where userData is the userId
+      _id: { $in: savedPostIds }, // Match posts with savedPostIds
     })
       .sort({ createdAt: -1 })
       .populate({
