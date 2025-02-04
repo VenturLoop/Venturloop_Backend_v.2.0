@@ -1899,6 +1899,28 @@ export const getPopularUsers = async (req, res) => {
         },
       },
       {
+        $addFields: {
+          profileCompletionStatus: {
+            $cond: {
+              if: {
+                $or: [
+                  { $not: "$profileData.profilePhoto" },
+                  { $eq: [{ $size: { $ifNull: ["$profileData.skillSet", []] } }, 0] },
+                  { $eq: [{ $size: { $ifNull: ["$profileData.industries", []] } }, 0] },
+                  { $eq: ["$profileData.priorStartupExperience", ""] },
+                  { $eq: ["$profileData.commitmentLevel", ""] },
+                  { $eq: ["$profileData.equityExpectation", ""] },
+                  { $eq: ["$profileData.minAge", ""] },
+                  { $eq: ["$profileData.maxAge", ""] },
+                ],
+              },
+              then: "incomplete",
+              else: "complete",
+            },
+          },
+        },
+      },
+      {
         $project: {
           _id: 1,
           name: 1,
