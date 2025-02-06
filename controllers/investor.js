@@ -151,6 +151,33 @@ export const getAllInvestors = async (req, res) => {
   }
 };
 
+export const getAllInvestorsForAdmin = async (req, res) => {
+  try {
+    // Fetch 12 investors with pagination
+    const investors = await Investor.find()
+
+    if (!investors || investors.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No investors found",
+      });
+    }
+ 
+    return res.status(200).json({
+      success: true,
+      message: "Investors fetched successfully.",
+      data: investors,
+      totalInvestors : investors.length
+    });
+  } catch (error) {
+    console.error("Error fetching investors:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const getAllInvestorInSearch = async (req, res) => {
   try {
     const { page = 1 } = req.query; // Get page number from query, default is 1

@@ -1920,6 +1920,12 @@ export const getPopularUsers = async (req, res) => {
           },
         },
       },
+      // ✅ Match only users with complete profiles
+      {
+        $match: {
+          "profileCompletionStatus": "complete",
+        },
+      },
       {
         $project: {
           _id: 1,
@@ -1950,6 +1956,7 @@ export const getPopularUsers = async (req, res) => {
     });
   }
 };
+
 
 export const checkUserLikedPost = async (req, res) => {
   try {
