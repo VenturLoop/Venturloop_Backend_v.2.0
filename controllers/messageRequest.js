@@ -55,7 +55,7 @@ export const getMessageRequests = async (req, res) => {
   }
 };
 
-export const acceptMessageRequest = async (req, res, io, inMemoryUsers) => {
+export const acceptMessageRequest = async (req, res) => {
   const { userId, ownerId } = req.params;
 
   try {
@@ -135,22 +135,13 @@ export const acceptMessageRequest = async (req, res, io, inMemoryUsers) => {
       await Promise.all([userConnections.save(), ownerConnections.save()]);
     }
 
-    // ✅ Emit real-time update to both users
-    io.of("/chat").to(inMemoryUsers.get(userId)).emit("connection_updated", {
-      connectedUserId: ownerId,
-    });
-    io.of("/chat").to(inMemoryUsers.get(ownerId)).emit("connection_updated", {
-      connectedUserId: userId,
-    });
-
-    // ✅ Send initial message using `handleNewMessage`
-    const messageData = {
+    await Message.create({
       senderId: ownerId,
       recipientId: userId,
       content: request.message,
-      tempId: `temp_${Date.now()}`,
-    };
-    await handleNewMessage(io, messageData, inMemoryUsers);
+      status: "sent",
+      timestamp: new Date(),
+    });
 
     res.status(200).json({
       success: true,
