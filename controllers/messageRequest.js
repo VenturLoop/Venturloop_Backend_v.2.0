@@ -55,11 +55,10 @@ export const getMessageRequests = async (req, res) => {
   }
 };
 
-export const acceptMessageRequest = async (req, res) => {
+export const acceptMessageRequest = async (req, res, io, inMemoryUsers) => {
   const { userId, ownerId } = req.params;
 
   try {
-    // Validate input
     if (!userId || !ownerId) {
       return res.status(400).json({
         success: false,
@@ -67,8 +66,8 @@ export const acceptMessageRequest = async (req, res) => {
       });
     }
 
-    // Find the pending message request
-    const request = await MessageRequest.findOne({
+    // ✅ Find and delete the pending message request
+    const request = await MessageRequest.findOneAndDelete({
       userId,
       ownerId,
       status: "pending",
@@ -81,55 +80,81 @@ export const acceptMessageRequest = async (req, res) => {
       });
     }
 
-    // Check if the user is already connected
-    let connection = await ConnectedUsers.findOne({
-      userId: userId,
-      "connections.user": ownerId,
+    // ✅ Delete the notification of type "message_request"
+    await Notification.deleteOne({
+      userId,
+      ownerId,
+      type: "message_request",
     });
 
-    // If not connected, add to ConnectedUsers
-    if (!connection) {
-      connection = await ConnectedUsers.findOneAndUpdate(
-        { userId: userId },
-        { $push: { connections: { user: ownerId, connectedAt: new Date() } } },
-        { new: true, upsert: true }
-      );
+    // ✅ Find sender and receiver
+    const [user, owner] = await Promise.all([
+      UserModel.findById(userId),
+      UserModel.findById(ownerId),
+    ]);
 
-      // Optionally, you can also add the user to the other user's connections.
-      await ConnectedUsers.findOneAndUpdate(
-        { userId: ownerId },
-        { $push: { connections: { user: userId, connectedAt: new Date() } } },
-        { new: true, upsert: true }
-      );
+    if (!user || !owner) {
+      return res.status(404).json({
+        success: false,
+        message: "User or owner not found.",
+      });
     }
 
-    // Create a connection with status "accepted"
-    const newConnection = await Connection.create({
-      sender: userId,
-      receiver: ownerId,
-      status: "accepted",
+    // ✅ Ensure `ConnectedUsers` exists for both users
+    let [userConnections, ownerConnections] = await Promise.all([
+      ConnectedUsers.findOne({ userId }),
+      ConnectedUsers.findOne({ userId: ownerId }),
+    ]);
+
+    if (!userConnections) {
+      userConnections = new ConnectedUsers({ userId, connections: [] });
+    }
+    if (!ownerConnections) {
+      ownerConnections = new ConnectedUsers({
+        userId: ownerId,
+        connections: [],
+      });
+    }
+
+    // ✅ Check if users are already connected
+    const isAlreadyConnected = userConnections.connections.some(
+      (conn) => conn.user.toString() === ownerId
+    );
+
+    if (!isAlreadyConnected) {
+      // ✅ Add each user to the other's connection list
+      userConnections.connections.push({
+        user: ownerId,
+        connectedAt: new Date(),
+      });
+      ownerConnections.connections.push({
+        user: userId,
+        connectedAt: new Date(),
+      });
+
+      await Promise.all([userConnections.save(), ownerConnections.save()]);
+    }
+
+    // ✅ Emit real-time update to both users
+    io.of("/chat").to(inMemoryUsers.get(userId)).emit("connection_updated", {
+      connectedUserId: ownerId,
+    });
+    io.of("/chat").to(inMemoryUsers.get(ownerId)).emit("connection_updated", {
+      connectedUserId: userId,
     });
 
-    // Create a message based on the request message
-    const message = await Message.create({
+    // ✅ Send initial message using `handleNewMessage`
+    const messageData = {
       senderId: ownerId,
       recipientId: userId,
       content: request.message,
-      isDelivered: false, // Initial delivery status
-    });
+      tempId: `temp_${Date.now()}`,
+    };
+    await handleNewMessage(io, messageData, inMemoryUsers);
 
-    // Delete the message request
-    await MessageRequest.deleteOne({ _id: request._id });
-
-    // Respond with success
     res.status(200).json({
       success: true,
-      message:
-        "Message request accepted, connection created, and message sent.",
-      data: {
-        connection: newConnection,
-        message,
-      },
+      message: "Message request accepted, users connected, and message sent.",
     });
   } catch (error) {
     console.error("Error in acceptMessageRequest:", error);
@@ -145,35 +170,51 @@ export const declineMessageRequest = async (req, res) => {
   const { userId, ownerId } = req.params;
 
   try {
-    // Find and delete the pending message request
-    const request = await MessageRequest.findOneAndDelete({
-      userId,
-      ownerId,
-      status: "pending",
-    });
-
-    const requestNotification = await Notification.findOneAndDelete({
-      userId,
-      ownerId,
-      type: "message_request",
-    });
-
-    if (!request || !requestNotification) {
-      return res.status(404).json({
+    if (!userId || !ownerId) {
+      return res.status(400).json({
         success: false,
-        message: "Pending message request not found.",
+        message: "User ID and Owner ID are required.",
       });
     }
 
+    // ✅ Delete the message request and notification in parallel
+    const [deletedRequest, deletedNotification] = await Promise.all([
+      MessageRequest.findOneAndDelete({
+        userId,
+        ownerId,
+        status: "pending",
+      }),
+      Notification.findOneAndDelete({
+        userId,
+        ownerId,
+        type: "message_request",
+      }),
+    ]);
+
+    // ✅ Check if any of them were missing
+    if (!deletedRequest && !deletedNotification) {
+      return res.status(404).json({
+        success: false,
+        message: "No pending message request or notification found.",
+      });
+    }
+
+    // ✅ Log for debugging
+    console.log(
+      `[Decline] Message request deleted: ${
+        deletedRequest?._id || "None"
+      } | Notification deleted: ${deletedNotification?._id || "None"}`
+    );
+
     res.status(200).json({
       success: true,
-      message: "Message request declined and deleted successfully.",
+      message: "Message request declined and notification removed.",
     });
   } catch (error) {
+    console.error("Error in declineMessageRequest:", error);
     res.status(500).json({
       success: false,
       message: "An error occurred while declining the message request.",
-      error: error.message,
     });
   }
 };

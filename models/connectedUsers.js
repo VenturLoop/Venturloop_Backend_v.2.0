@@ -8,7 +8,7 @@ const ConnectedUsersSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    connections: [  
+    connections: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Connected user ID
         connectedAt: { type: Date, default: Date.now }, // Timestamp of connection
