@@ -136,8 +136,8 @@ export const acceptMessageRequest = async (req, res) => {
     }
 
     await Message.create({
-      senderId: ownerId,
-      recipientId: userId,
+      senderId: userId,
+      recipientId: ownerId,
       content: request.message,
       status: "sent",
       timestamp: new Date(),
