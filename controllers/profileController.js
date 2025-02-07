@@ -813,8 +813,9 @@ export const getExperienceById = async (req, res) => {
 
     if (!experience) {
       return res.status(404).json({
-        success: false,
+        success: true,
         message: "Experience not found for the given experienceId.",
+        experience: [],
       });
     }
 
