@@ -210,11 +210,7 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
     // ✅ Find the user's connected users
     const connectedUsers = await ConnectedUsers.findOne({ userId }).populate({
       path: "connections.user",
-      select: "_id name profile",
-      populate: {
-        path: "profile",
-        select: "profilePhoto",
-      },
+      select: "_id name profilePhoto",
     });
 
     // ✅ Check if connectedUsers exists
@@ -238,62 +234,49 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
       });
     }
 
-    // ✅ Fix: Use `new mongoose.Types.ObjectId(userId)`
+    // ✅ Fetch latest messages for each connected user
     const messages = await Message.aggregate([
       {
         $match: {
           $or: [
-            {
-              senderId: new mongoose.Types.ObjectId(userId),
-              recipientId: {
-                $in: userIds.map((id) => new mongoose.Types.ObjectId(id)),
-              },
-            },
-            {
-              senderId: {
-                $in: userIds.map((id) => new mongoose.Types.ObjectId(id)),
-              },
-              recipientId: new mongoose.Types.ObjectId(userId),
-            },
+            { senderId: new mongoose.Types.ObjectId(userId), recipientId: { $in: userIds.map(id => new mongoose.Types.ObjectId(id)) } },
+            { senderId: { $in: userIds.map(id => new mongoose.Types.ObjectId(id)) }, recipientId: new mongoose.Types.ObjectId(userId) },
           ],
         },
       },
-      { $sort: { timestamp: -1 } },
+      { $sort: { timestamp: -1 } }, // ✅ Sort messages to get the latest first
       {
         $group: {
           _id: {
             senderId: "$senderId",
             recipientId: "$recipientId",
           },
-          latestMessage: { $first: "$$ROOT" },
+          latestMessage: { $first: "$$ROOT" }, // ✅ Pick the latest message per user
         },
       },
     ]);
 
     // ✅ Map messages to users
-    const usersWithMessages = connectedUsers.connections
-      .map((connection) => {
-        if (!connection.user) return null; // Prevents errors if connection.user is missing
+    const usersWithMessages = connectedUsers.connections.map((connection) => {
+      if (!connection.user) return null; // Prevents errors if connection.user is missing
 
-        const latestMessage = messages.find(
-          (msg) =>
-            (msg._id.senderId.toString() === userId &&
-              msg._id.recipientId.toString() ===
-                connection.user._id.toString()) ||
-            (msg._id.recipientId.toString() === userId &&
-              msg._id.senderId.toString() === connection.user._id.toString())
-        );
+      const latestMessage = messages.find(
+        (msg) =>
+          (msg._id.senderId.toString() === userId &&
+            msg._id.recipientId.toString() === connection.user._id.toString()) ||
+          (msg._id.recipientId.toString() === userId &&
+            msg._id.senderId.toString() === connection.user._id.toString())
+      );
 
-        return {
-          user: {
-            _id: connection.user._id,
-            name: connection.user.name,
-            profilePhoto: connection.user.profile?.profilePhoto || "",
-          },
-          latestMessage: latestMessage ? latestMessage.latestMessage : null,
-        };
-      })
-      .filter(Boolean);
+      return {
+        user: {
+          _id: connection.user._id,
+          name: connection.user.name,
+          profilePhoto: connection.user.profilePhoto || "",
+        },
+        latestMessage: latestMessage ? latestMessage.latestMessage : null, // Attach latest message if found
+      };
+    }).filter(Boolean); // Remove any null values
 
     res.status(200).json({ success: true, data: usersWithMessages });
   } catch (error) {
