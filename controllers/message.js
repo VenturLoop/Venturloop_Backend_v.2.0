@@ -198,6 +198,51 @@ export const getUnseenMessages = async (req, res) => {
   }
 };
 
+
+export const markMessagesAsSeenBetweenUsers = async (req, res) => {
+  try {
+    const { senderId, recipientId } = req.body; // Extract senderId and recipientId from the request body
+
+    // Validate input
+    if (!senderId || !recipientId) {
+      return res.status(400).json({
+        success: false,
+        message: "Both senderId and recipientId are required.",
+      });
+    }
+
+    // Step 1: Find and update all unseen messages from sender to recipient
+    const updatedMessages = await Message.updateMany(
+      { senderId, recipientId, isSeen: false }, // Unseen messages from sender to recipient
+      { $set: { isSeen: true } } // Mark them as seen
+    );
+
+    // Step 2: Check if any messages were updated
+    if (updatedMessages.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No unseen messages found between the specified users.",
+      });
+    }
+
+    // Return a success response with the count of updated messages
+    return res.status(200).json({
+      success: true,
+      message: `${updatedMessages.modifiedCount} messages marked as seen successfully.`,
+      data: {
+        updatedMessageCount: updatedMessages.modifiedCount,
+      },
+    });
+  } catch (error) {
+    console.error("Error marking messages as seen:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error. Please try again later.",
+      error: error.message,
+    });
+  }
+};
+
 export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -256,75 +301,35 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
       },
     ]);
 
-    // ✅ Map messages to users
-    const usersWithMessages = connectedUsers.connections.map((connection) => {
-      if (!connection.user) return null; // Prevents errors if connection.user is missing
+    // ✅ Map messages to users and sort by latest message timestamp
+    const usersWithMessages = connectedUsers.connections
+      .map((connection) => {
+        if (!connection.user) return null; // Prevents errors if connection.user is missing
 
-      const latestMessage = messages.find(
-        (msg) =>
-          (msg._id.senderId.toString() === userId &&
-            msg._id.recipientId.toString() === connection.user._id.toString()) ||
-          (msg._id.recipientId.toString() === userId &&
-            msg._id.senderId.toString() === connection.user._id.toString())
-      );
+        const latestMessage = messages.find(
+          (msg) =>
+            (msg._id.senderId.toString() === userId &&
+              msg._id.recipientId.toString() === connection.user._id.toString()) ||
+            (msg._id.recipientId.toString() === userId &&
+              msg._id.senderId.toString() === connection.user._id.toString())
+        );
 
-      return {
-        user: {
-          _id: connection.user._id,
-          name: connection.user.name,
-          profilePhoto: connection.user.profilePhoto || "",
-        },
-        latestMessage: latestMessage ? latestMessage.latestMessage : null, // Attach latest message if found
-      };
-    }).filter(Boolean); // Remove any null values
+        return {
+          user: {
+            _id: connection.user._id,
+            name: connection.user.name,
+            profilePhoto: connection.user.profilePhoto || "",
+          },
+          latestMessage: latestMessage ? latestMessage.latestMessage : null,
+          latestMessageTime: latestMessage ? latestMessage.latestMessage.timestamp : new Date(0), // Use old date if no messages
+        };
+      })
+      .filter(Boolean) // Remove null values
+      .sort((a, b) => new Date(b.latestMessageTime) - new Date(a.latestMessageTime)); // ✅ Sort by latest message timestamp
 
     res.status(200).json({ success: true, data: usersWithMessages });
   } catch (error) {
     console.error("Error fetching connected users and messages:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
-  }
-};
-
-export const markMessagesAsSeenBetweenUsers = async (req, res) => {
-  try {
-    const { senderId, recipientId } = req.body; // Extract senderId and recipientId from the request body
-
-    // Validate input
-    if (!senderId || !recipientId) {
-      return res.status(400).json({
-        success: false,
-        message: "Both senderId and recipientId are required.",
-      });
-    }
-
-    // Step 1: Find and update all unseen messages from sender to recipient
-    const updatedMessages = await Message.updateMany(
-      { senderId, recipientId, isSeen: false }, // Unseen messages from sender to recipient
-      { $set: { isSeen: true } } // Mark them as seen
-    );
-
-    // Step 2: Check if any messages were updated
-    if (updatedMessages.matchedCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No unseen messages found between the specified users.",
-      });
-    }
-
-    // Return a success response with the count of updated messages
-    return res.status(200).json({
-      success: true,
-      message: `${updatedMessages.modifiedCount} messages marked as seen successfully.`,
-      data: {
-        updatedMessageCount: updatedMessages.modifiedCount,
-      },
-    });
-  } catch (error) {
-    console.error("Error marking messages as seen:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error. Please try again later.",
-      error: error.message,
-    });
   }
 };
