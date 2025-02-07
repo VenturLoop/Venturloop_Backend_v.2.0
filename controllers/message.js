@@ -210,7 +210,11 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
     // ✅ Find the user's connected users
     const connectedUsers = await ConnectedUsers.findOne({ userId }).populate({
       path: "connections.user",
-      select: "_id name profilePhoto",
+      select: "_id name profile",
+      populate: {
+        path: "profile",
+        select: "profilePhoto",
+      },
     });
 
     // ✅ Check if connectedUsers exists
@@ -239,8 +243,18 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
       {
         $match: {
           $or: [
-            { senderId: new mongoose.Types.ObjectId(userId), recipientId: { $in: userIds.map(id => new mongoose.Types.ObjectId(id)) } },
-            { senderId: { $in: userIds.map(id => new mongoose.Types.ObjectId(id)) }, recipientId: new mongoose.Types.ObjectId(userId) },
+            {
+              senderId: new mongoose.Types.ObjectId(userId),
+              recipientId: {
+                $in: userIds.map((id) => new mongoose.Types.ObjectId(id)),
+              },
+            },
+            {
+              senderId: {
+                $in: userIds.map((id) => new mongoose.Types.ObjectId(id)),
+              },
+              recipientId: new mongoose.Types.ObjectId(userId),
+            },
           ],
         },
       },
@@ -264,7 +278,8 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
         const latestMessage = messages.find(
           (msg) =>
             (msg._id.senderId.toString() === userId &&
-              msg._id.recipientId.toString() === connection.user._id.toString()) ||
+              msg._id.recipientId.toString() ===
+                connection.user._id.toString()) ||
             (msg._id.recipientId.toString() === userId &&
               msg._id.senderId.toString() === connection.user._id.toString())
         );
@@ -273,7 +288,7 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
           user: {
             _id: connection.user._id,
             name: connection.user.name,
-            profilePhoto: connection.user.profilePhoto || "",
+            profilePhoto: connection.user.profile?.profilePhoto || "",
           },
           latestMessage: latestMessage ? latestMessage.latestMessage : null,
         };
