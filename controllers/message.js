@@ -202,54 +202,71 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Validate ObjectId
+    // ✅ Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ success: false, error: "Invalid user ID" });
     }
 
-    // Find the user's connected users
+    // ✅ Find the user's connected users
     const connectedUsers = await ConnectedUsers.findOne({ userId }).populate({
       path: "connections.user",
-      select: "_id name profile",
-      populate: {
-        path: "profile",
-        select: "profilePhoto",
-      },
+      select: "_id name profilePhoto",
     });
 
     if (!connectedUsers) {
-      return res
-        .status(404)
-        .json({ success: false, error: "No connected users found" });
+      return res.status(404).json({
+        success: false,
+        error: "No connected users found",
+      });
     }
 
-    const usersWithMessages = [];
+    const userIds = connectedUsers.connections.map((conn) => conn.user._id);
 
-    for (const connection of connectedUsers.connections) {
-      const latestMessage = await Message.findOne({
-        $or: [
-          { senderId: userId, recipientId: connection.user._id },
-          { senderId: connection.user._id, recipientId: userId },
-        ],
-      })
-        .sort({ timestamp: -1 })
-        .select("content senderId recipientId status timestamp");
-
-      if (latestMessage) {
-        usersWithMessages.push({
-          user: {
-            _id: connection.user._id,
-            name: connection.user.name,
-            profilePhoto: connection.user.profile?.profilePhoto || "",
+    // ✅ Fetch latest messages for all connected users in one query
+    const messages = await Message.aggregate([
+      {
+        $match: {
+          $or: [
+            { senderId: mongoose.Types.ObjectId(userId), recipientId: { $in: userIds } },
+            { senderId: { $in: userIds }, recipientId: mongoose.Types.ObjectId(userId) },
+          ],
+        },
+      },
+      { $sort: { timestamp: -1 } }, // Sort by latest first
+      {
+        $group: {
+          _id: {
+            senderId: "$senderId",
+            recipientId: "$recipientId",
           },
-          latestMessage,
-        });
-      }
-    }
+          latestMessage: { $first: "$$ROOT" }, // Get the most recent message
+        },
+      },
+    ]);
+
+    // ✅ Map messages to users
+    const usersWithMessages = connectedUsers.connections.map((connection) => {
+      const latestMessage = messages.find(
+        (msg) =>
+          (msg._id.senderId.toString() === userId &&
+            msg._id.recipientId.toString() === connection.user._id.toString()) ||
+          (msg._id.recipientId.toString() === userId &&
+            msg._id.senderId.toString() === connection.user._id.toString())
+      );
+
+      return {
+        user: {
+          _id: connection.user._id,
+          name: connection.user.name,
+          profilePhoto: connection.user.profilePhoto || "",
+        },
+        latestMessage: latestMessage ? latestMessage.latestMessage : null, // Attach message if found
+      };
+    });
 
     res.status(200).json({ success: true, data: usersWithMessages });
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching connected users and messages:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 };
