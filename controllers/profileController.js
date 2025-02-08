@@ -1236,18 +1236,16 @@ export const getViewers = async (req, res) => {
       });
     }
 
-    // ✅ Filter viewers: Only keep viewers from the current month
-    let filteredViewers = viewerDoc.viewers.filter(
+    // ✅ Filter viewers from the current month only
+    const currentMonthViewers = viewerDoc.viewers.filter(
       (viewer) =>
-        viewer.viewedAt >= firstDayOfMonth &&
-        viewer.viewedAt <= lastDayOfMonth &&
-        viewer.viewerId.toString() !== userId // ✅ Remove self-viewers
+        viewer.viewedAt >= firstDayOfMonth && viewer.viewedAt <= lastDayOfMonth
     );
 
-    // ✅ If changes were made, update the database
-    if (filteredViewers.length !== viewerDoc.viewers.length) {
-      viewerDoc.viewers = filteredViewers;
-      await viewerDoc.save();
+    // ✅ Delete old viewers (not from the current month)
+    if (currentMonthViewers.length !== viewerDoc.viewers.length) {
+      viewerDoc.viewers = currentMonthViewers;
+      await viewerDoc.save(); // ✅ Update database after removing old viewers
     }
 
     // ✅ Populate viewer details
@@ -1262,7 +1260,7 @@ export const getViewers = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      totalViewers: filteredViewers.length,
+      totalViewers: currentMonthViewers.length,
       viewers: viewerDoc.viewers,
     });
   } catch (error) {
