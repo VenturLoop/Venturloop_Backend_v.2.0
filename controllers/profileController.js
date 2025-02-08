@@ -6,6 +6,7 @@ import BlockModel from "../models/block.js";
 import ReportModel from "../models/report.js";
 import Company from "../models/company.js";
 import ViewerModel from "../models/viewUser.js";
+import mongoose from "mongoose";
 
 export const saveUserProfileDetails = async (req, res) => {
   try {
@@ -1154,70 +1155,114 @@ export const savePushToken = async (req, res) => {
   res.status(200).json({ message: "Push token saved successfully" });
 };
 
-// Controller to save userId and viewerId
 export const saveViewer = async (req, res) => {
   const { userId, viewerId } = req.body;
 
   try {
-    // Check if the userId already exists in the database
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(viewerId)
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user or viewer ID." });
+    }
+
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
     let viewerDoc = await ViewerModel.findOne({ userId });
 
-    if (viewerDoc) {
-      // If userId exists, check if viewerId is already in the viewers array
+    if (!viewerDoc) {
+      viewerDoc = new ViewerModel({
+        userId,
+        viewers: [{ viewerId, viewedAt: now }],
+      });
+    } else {
+      viewerDoc.viewers = viewerDoc.viewers.filter(
+        (viewer) =>
+          viewer.viewedAt >= firstDayOfMonth &&
+          viewer.viewedAt <= lastDayOfMonth
+      );
+
       const isAlreadyViewer = viewerDoc.viewers.some(
         (viewer) => viewer.viewerId.toString() === viewerId
       );
 
       if (!isAlreadyViewer) {
-        // Add the viewerId to the viewers array
-        viewerDoc.viewers.push({ viewerId });
-        await viewerDoc.save();
+        viewerDoc.viewers.push({ viewerId, viewedAt: now });
       }
-    } else {
-      // If userId doesn't exist, create a new document
-      viewerDoc = new ViewerModel({
-        userId,
-        viewers: [{ viewerId }],
-      });
-      await viewerDoc.save();
     }
 
-    res
-      .status(200)
-      .json({ success: true, message: "Viewer saved successfully." });
+    await viewerDoc.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Viewer saved successfully and old data removed.",
+      totalViewers: viewerDoc.viewers.length,
+      viewers: viewerDoc.viewers,
+    });
   } catch (error) {
     console.error("Error saving viewer:", error);
     res.status(500).json({ success: false, message: "Internal Server Error." });
   }
 };
 
-// Controller to get viewers and total count by userId
 export const getViewers = async (req, res) => {
   const { userId } = req.params;
 
   try {
-    // Find the viewer document for the specified userId and populate viewer details
-    const viewerDoc = await ViewerModel.findOne({ userId }).populate({
-      path: "viewers.viewerId", // Populate viewerId within the viewers array
-      select: "name profile", // Select name and profile fields from UserModel
+    // ✅ Validate userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID." });
+    }
+
+    // ✅ Get the first day and last day of the current month
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    // ✅ Find the viewer document for the specified userId
+    let viewerDoc = await ViewerModel.findOne({ userId });
+
+    if (!viewerDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found in viewer data.",
+        totalViewers: 0,
+        viewers: [],
+      });
+    }
+
+    // ✅ Filter viewers from the current month only
+    const currentMonthViewers = viewerDoc.viewers.filter(
+      (viewer) =>
+        viewer.viewedAt >= firstDayOfMonth && viewer.viewedAt <= lastDayOfMonth
+    );
+
+    // ✅ Delete old viewers (not from the current month)
+    if (currentMonthViewers.length !== viewerDoc.viewers.length) {
+      viewerDoc.viewers = currentMonthViewers;
+      await viewerDoc.save(); // ✅ Update database after removing old viewers
+    }
+
+    // ✅ Populate viewer details
+    await viewerDoc.populate({
+      path: "viewers.viewerId",
+      select: "name profile",
       populate: {
-        path: "profile", // Populate the profile field within UserModel
-        select: "profilePhoto", // Select only the profilePhoto from UserProfileModel
+        path: "profile",
+        select: "profilePhoto",
       },
     });
 
-    if (!viewerDoc) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found in viewer data." });
-    }
-
-    const totalViewers = viewerDoc.viewers.length;
-
     res.status(200).json({
       success: true,
-      totalViewers,
-      viewers: viewerDoc.viewers, // Return the populated viewers array
+      totalViewers: currentMonthViewers.length,
+      viewers: viewerDoc.viewers,
     });
   } catch (error) {
     console.error("Error retrieving viewers:", error);
