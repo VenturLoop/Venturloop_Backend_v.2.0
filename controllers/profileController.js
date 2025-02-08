@@ -1213,7 +1213,6 @@ export const getViewers = async (req, res) => {
   const { userId } = req.params;
 
   try {
-    // ✅ Validate userId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res
         .status(400)
@@ -1237,16 +1236,18 @@ export const getViewers = async (req, res) => {
       });
     }
 
-    // ✅ Filter viewers from the current month only
-    const currentMonthViewers = viewerDoc.viewers.filter(
+    // ✅ Filter viewers: Only keep viewers from the current month
+    let filteredViewers = viewerDoc.viewers.filter(
       (viewer) =>
-        viewer.viewedAt >= firstDayOfMonth && viewer.viewedAt <= lastDayOfMonth
+        viewer.viewedAt >= firstDayOfMonth &&
+        viewer.viewedAt <= lastDayOfMonth &&
+        viewer.viewerId.toString() !== userId // ✅ Remove self-viewers
     );
 
-    // ✅ Delete old viewers (not from the current month)
-    if (currentMonthViewers.length !== viewerDoc.viewers.length) {
-      viewerDoc.viewers = currentMonthViewers;
-      await viewerDoc.save(); // ✅ Update database after removing old viewers
+    // ✅ If changes were made, update the database
+    if (filteredViewers.length !== viewerDoc.viewers.length) {
+      viewerDoc.viewers = filteredViewers;
+      await viewerDoc.save();
     }
 
     // ✅ Populate viewer details
@@ -1261,7 +1262,7 @@ export const getViewers = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      totalViewers: currentMonthViewers.length,
+      totalViewers: filteredViewers.length,
       viewers: viewerDoc.viewers,
     });
   } catch (error) {
