@@ -2451,37 +2451,31 @@ export const fetchSavedSkillSwapPosts = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Validate if userId is provided
-    if (!userId) {
-      return res.status(400).json({ message: "User ID is required." });
-    }
-
-    // Fetch the SavedProfile document by userId
-    const savedProfile = await SavedProfile.findOne({ userId })
-      .select("savedPostIds") // Select only savedPostIds
-      .exec();
-
-    // If no saved profile is found, return an error
-    if (!savedProfile) {
+    // ✅ Validate userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res
-        .status(404)
-        .json({ message: "Saved profile not found for this user." });
+        .status(400)
+        .json({ success: false, message: "Invalid user ID." });
     }
 
-    // Get the savedPostIds from the profile
-    const { savedPostIds } = savedProfile;
+    // ✅ Fetch the SavedProfile document by userId
+    const savedProfile = await SavedProfile.findOne({ userId }).select(
+      "savedPostIds"
+    );
 
-    // If no saved post IDs are found, return a message
-    if (savedPostIds.length === 0) {
-      return res.status(404).json({
-        message: "No saved posts found for this user.",
-      });
+    // ✅ If no saved profile or saved posts exist, return an empty array
+    if (
+      !savedProfile ||
+      !Array.isArray(savedProfile.savedPostIds) ||
+      savedProfile.savedPostIds.length === 0
+    ) {
+      return res.status(200).json({ success: true, posts: [] });
     }
 
-    // Fetch all posts where postType is "skillSwap" and postId is in savedPostIds
+    // ✅ Fetch all `skillSwap` posts that are saved
     const posts = await Post.find({
-      postType: "skillSwap", // Only skillSwap posts
-      _id: { $in: savedPostIds }, // Match posts with savedPostIds
+      _id: { $in: savedProfile.savedPostIds }, // Match posts with savedPostIds
+      postType: "skillSwap",
     })
       .sort({ createdAt: -1 })
       .populate({
