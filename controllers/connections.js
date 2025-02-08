@@ -145,24 +145,24 @@ export const acceptConnectionRequest = async (req, res) => {
       });
     }
 
-      // Update the UserModel's connections count for both sender and receiver
-      const sender = await UserModel.findById(senderId);
-      const receiver = await UserModel.findById(receiverId);
+    // Update the UserModel's connections count for both sender and receiver
+    const sender = await UserModel.findById(senderId);
+    const receiver = await UserModel.findById(receiverId);
 
-      if (!sender || !receiver) {
-        return res.status(404).json({
-          success: false,
-          message: "Sender or receiver not found.",
-        });
-      }
+    if (!sender || !receiver) {
+      return res.status(404).json({
+        success: false,
+        message: "Sender or receiver not found.",
+      });
+    }
 
-      // Increment the connections count for both users
-      sender.totalConnections += 1;
-      receiver.totalConnections += 1;
+    // Increment the connections count for both users
+    sender.totalConnections += 1;
+    receiver.totalConnections += 1;
 
-      // Save the updated user records
-      await sender.save();
-      await receiver.save();
+    // Save the updated user records
+    await sender.save();
+    await receiver.save();
 
     // Check if ConnectedUsers document exists for sender, create if not
     let senderConnections = await ConnectedUsers.findOne({ userId: senderId });
@@ -257,9 +257,6 @@ export const removeConnection = async (req, res) => {
   const { userId } = req.params; // The user initiating the removal
   const { connectedUserId } = req.body; // The user being removed
 
-  console.log("userId:", userId);
-  console.log("connectedUserId:", connectedUserId);
-
   try {
     if (!connectedUserId) {
       return res.status(400).json({
@@ -268,20 +265,21 @@ export const removeConnection = async (req, res) => {
       });
     }
 
-    // Remove connectedUserId from userId's connections
+    // ✅ Remove `connectedUserId` from `userId`'s connections
     const userConnections = await ConnectedUsers.findOneAndUpdate(
       { userId },
       { $pull: { connections: { user: connectedUserId } } },
       { new: true }
     );
 
-    // Remove userId from connectedUserId's connections
+    // ✅ Remove `userId` from `connectedUserId`'s connections
     const connectedUserConnections = await ConnectedUsers.findOneAndUpdate(
       { userId: connectedUserId },
       { $pull: { connections: { user: userId } } },
       { new: true }
     );
 
+    // ✅ If no connections exist, return an error
     if (!userConnections || !connectedUserConnections) {
       return res.status(404).json({
         success: false,
@@ -289,20 +287,30 @@ export const removeConnection = async (req, res) => {
       });
     }
 
-    // Decrement the connection count for both users
-    await UserModel.findByIdAndUpdate(
-      userId,
-      { $inc: { totalConnections: -1 } }, // Decrease by 1
-      { new: true }
+    // ✅ Fetch both users
+    const [user, connectedUser] = await Promise.all([
+      UserModel.findById(userId),
+      UserModel.findById(connectedUserId),
+    ]);
+
+    if (!user || !connectedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "One or both users not found.",
+      });
+    }
+
+    // ✅ Decrement `totalConnections` but ensure it doesn't go below 0
+    user.totalConnections = Math.max(0, (user.totalConnections || 0) - 1);
+    connectedUser.totalConnections = Math.max(
+      0,
+      (connectedUser.totalConnections || 0) - 1
     );
 
-    await UserModel.findByIdAndUpdate(
-      connectedUserId,
-      { $inc: { totalConnections: -1 } }, // Decrease by 1
-      { new: true }
-    );
+    // ✅ Save updated user connection counts
+    await Promise.all([user.save(), connectedUser.save()]);
 
-    // Delete all messages between the two users
+    // ✅ Delete all messages between the two users
     await Message.deleteMany({
       $or: [
         { senderId: userId, recipientId: connectedUserId },
@@ -312,7 +320,8 @@ export const removeConnection = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Connection removed and messages deleted successfully.",
+      message:
+        "Connection removed, totalConnections updated, and messages deleted successfully.",
     });
   } catch (error) {
     console.error("Error removing connection:", error);
