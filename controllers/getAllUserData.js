@@ -3,11 +3,27 @@ import SavedProfile from "../models/savedProfile.js";
 import UserModel from "../models/user.js";
 import BlockModel from "../models/block.js";
 import ReportModel from "../models/report.js";
+import mongoose from "mongoose";
 
 // Controller to get users feed
 export const getCofoundersFeed = async (req, res) => {
   try {
     const { userId } = req.params;
+    let { cursor, limit = 6 } = req.query; // Cursor-based pagination
+
+    // ✅ Validate userId before querying
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid userId provided",
+      });
+    }
+
+    // ✅ Validate cursor before using it in query
+    let cursorFilter = {};
+    if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+      cursorFilter._id = { $gt: new mongoose.Types.ObjectId(cursor) };
+    }
 
     // Get blocked and reported users
     const blockedUserIds = await BlockModel.find({ blocker: userId }).distinct(
@@ -18,33 +34,78 @@ export const getCofoundersFeed = async (req, res) => {
     }).distinct("reported");
     const excludedUserIds = [...blockedUserIds, ...reportedUserIds, userId];
 
-    // Fetch 6 verified users with complete profiles
-    const users = await UserModel.find({
-      isVerified: true,
-      isDeleted: false,
-      _id: { $nin: excludedUserIds },
-    })
-      .populate({
-        path: "profile",
-        match: {
-          status: { $exists: true, $ne: null },
-          profilePhoto: { $exists: true, $ne: null },
-          birthday: { $exists: true, $ne: null },
-          bio: { $exists: true, $ne: null },
-          location: { $exists: true, $ne: null },
-          skillSet: { $exists: true, $ne: [] },
-          industries: { $exists: true, $ne: [] },
-          priorStartupExperience: { $exists: true, $ne: null },
-          commitmentLevel: { $exists: true, $ne: null },
-          equityExpectation: { $exists: true, $ne: null },
+    const users = await UserModel.aggregate([
+      {
+        $match: {
+          isVerified: true,
+          isDeleted: false,
+          _id: { $nin: excludedUserIds }, // Exclude blocked, swiped, or reported users
         },
-      })
-      .limit(6);
+      },
+      { $sample: { size: parseInt(limit) } }, // Get random users
+      {
+        $lookup: {
+          from: "userprofiles", // ✅ Ensure this matches your actual MongoDB collection name
+          localField: "profile",
+          foreignField: "_id",
+          as: "profile",
+        },
+      },
+      { $unwind: { path: "$profile", preserveNullAndEmptyArrays: false } }, // ✅ Ensures users without profiles are removed
+      {
+        $match: {
+          "profile.status": { $exists: true, $ne: null },
+          "profile.profilePhoto": { $exists: true, $ne: null },
+          "profile.birthday": { $exists: true, $ne: null },
+          "profile.bio": { $exists: true, $ne: null },
+          "profile.location": { $exists: true, $ne: null },
+          "profile.skillSet": { $exists: true, $ne: [] },
+          "profile.industries": { $exists: true, $ne: [] },
+          "profile.priorStartupExperience": { $exists: true, $ne: null },
+          "profile.commitmentLevel": { $exists: true, $ne: null },
+          "profile.equityExpectation": { $exists: true, $ne: null },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          email: 1,
+          isVerified: 1,
+          isDeleted: 1,
+          totalConnections: 1,
+          pushToken: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          "profile._id": 1,
+          "profile.birthday": 1,
+          "profile.location": 1,
+          "profile.skillSet": 1,
+          "profile.industries": 1,
+          "profile.commitmentLevel": 1,
+          "profile.equityExpectation": 1,
+          "profile.priorStartupExperience": 1,
+          "profile.status": 1,
+          "profile.profilePhoto": 1,
+          "profile.bio": 1,
+          "profile.instagramLink": 1,
+          "profile.linkedInLink": 1,
+          "profile.xLink": 1,
+        },
+      },
+    ]);
+
+    // Filter users who have a profile
+    const filteredUsers = users.filter((user) => user.profile);
+
+    // Determine next cursor
+    const nextCursor = users.length > limit ? users[limit]._id : null;
 
     return res.status(200).json({
       success: true,
       message: "Verified users with complete profiles fetched successfully.",
-      data: users.filter((user) => user.profile), // Ensure only users with profiles are included
+      data: filteredUsers.slice(0, limit),
+      nextCursor,
     });
   } catch (error) {
     console.error("Error fetching users feed:", error);
@@ -251,7 +312,6 @@ export const addInvestorToSavedProfiles = async (req, res) => {
       message: "Investor profile saved successfully.",
       data: savedProfile,
     });
-
   } catch (error) {
     console.error("Error saving investor profile:", error);
     return res.status(500).json({
