@@ -1430,6 +1430,8 @@ export const getSavedPostsByUserId = async (req, res) => {
       "savedPostIds"
     );
 
+    console.log("Saved Profile Data:", savedProfile);
+
     if (
       !savedProfile ||
       !Array.isArray(savedProfile.savedPostIds) ||
@@ -1438,10 +1440,15 @@ export const getSavedPostsByUserId = async (req, res) => {
       return res.status(200).json({ success: true, posts: [] }); // ✅ Return empty array if no saved posts
     }
 
+    // ✅ Convert savedPostIds to `ObjectId` array to ensure correct query
+    const savedPostIds = savedProfile.savedPostIds.map(
+      (id) => new mongoose.Types.ObjectId(id)
+    );
+
     // ✅ Fetch all saved posts with specific post types
     const posts = await Post.find({
-      _id: { $in: savedProfile.savedPostIds },
-      postType: { $in: ["post", "poles", "youtubeUrl"] },
+      _id: { $in: savedPostIds }, // ✅ Match posts with savedPostIds
+      postType: { $in: ["posts", "poles", "youtubeUrl"] }, // ✅ Match only these types
     })
       .sort({ createdAt: -1 })
       .populate({
@@ -1455,7 +1462,13 @@ export const getSavedPostsByUserId = async (req, res) => {
         populate: { path: "profile", select: "profilePhoto" },
       });
 
-    // Map through each project post to add likeCount, saveCount, and commentUsers
+    console.log("Fetched Posts Data:", posts);
+
+    if (!posts.length) {
+      return res.status(200).json({ success: true, posts: [] }); // ✅ No saved posts found
+    }
+
+    // ✅ Transform posts to include likeCount, saveCount, and commentUsers
     const transformedPosts = posts.map((post) => {
       const uniqueCommenters = new Set();
       const firstThreeUniqueComments = [];
@@ -1464,12 +1477,11 @@ export const getSavedPostsByUserId = async (req, res) => {
         if (!uniqueCommenters.has(comment.userId._id.toString())) {
           uniqueCommenters.add(comment.userId._id.toString());
           firstThreeUniqueComments.push({
-            profileImage: comment.userId.profile.profilePhoto,
+            profileImage: comment.userId.profile?.profilePhoto || "",
           });
         }
         if (firstThreeUniqueComments.length >= 3) break;
       }
-
       return {
         _id: post._id,
         title: post.title,
