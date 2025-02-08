@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import ConnectedUsers from "../models/connectedUsers.js";
 import Investor from "../models/investor.js";
 import Post from "../models/post.js";
@@ -1301,58 +1302,40 @@ export const getSavedProjectsByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID is required.",
-      });
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID." });
     }
 
-    // Fetch saved profile by userId to get savedPostIds
-    const savedProfile = await SavedProfile.findOne({ userId })
-      .select("savedPostIds") // Select only savedPostIds
-      .exec();
+    // ✅ Find saved profile by userId
+    const savedProfile = await SavedProfile.findOne({ userId }).select(
+      "savedPostIds"
+    );
 
-    // If no saved profile is found, return an error
-    if (!savedProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "Saved profile not found for this user.",
-      });
+    if (
+      !savedProfile ||
+      !Array.isArray(savedProfile.savedPostIds) ||
+      savedProfile.savedPostIds.length === 0
+    ) {
+      return res.status(200).json({ success: true, posts: [] }); // ✅ Return empty array if no saved posts
     }
 
-    // Get savedPostIds from the profile
-    const { savedPostIds } = savedProfile;
-
-    // If no saved post IDs are found, return a message
-    if (savedPostIds.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No saved posts found for this user.",
-      });
-    }
-
-    // Query to find posts where the userId is in the saves array and postType is "project"
+    // ✅ Fetch all saved posts with specific post types
     const posts = await Post.find({
-      _id: { $in: savedPostIds }, // Match posts with savedPostIds
-      postType: "project", // Only fetch project posts
+      _id: { $in: savedProfile.savedPostIds },
+      postType: "project",
     })
       .sort({ createdAt: -1 })
       .populate({
         path: "userData",
         select: "name profile",
-        populate: {
-          path: "profile",
-          select: "profilePhoto",
-        },
+        populate: { path: "profile", select: "profilePhoto" },
       })
       .populate({
-        path: "comments.userId", // Populate user profile from comment userId
+        path: "comments.userId",
         select: "name profile",
-        populate: {
-          path: "profile",
-          select: "profilePhoto",
-        },
+        populate: { path: "profile", select: "profilePhoto" },
       });
 
     // Map through each project post to add likeCount, saveCount, and commentUsers
@@ -1416,58 +1399,40 @@ export const getSavedPostsByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID is required.",
-      });
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID." });
     }
 
-    // Fetch saved profile by userId to get savedPostIds
-    const savedProfile = await SavedProfile.findOne({ userId })
-      .select("savedPostIds") // Select only savedPostIds
-      .exec();
+    // ✅ Find saved profile by userId
+    const savedProfile = await SavedProfile.findOne({ userId }).select(
+      "savedPostIds"
+    );
 
-    // If no saved profile is found, return an error
-    if (!savedProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "Saved profile not found for this user.",
-      });
+    if (
+      !savedProfile ||
+      !Array.isArray(savedProfile.savedPostIds) ||
+      savedProfile.savedPostIds.length === 0
+    ) {
+      return res.status(200).json({ success: true, posts: [] }); // ✅ Return empty array if no saved posts
     }
 
-    // Get savedPostIds from the profile
-    const { savedPostIds } = savedProfile;
-
-    // If no saved post IDs are found, return a message
-    if (savedPostIds.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No saved posts found for this user.",
-      });
-    }
-
-    // Query to find posts where the userId is in the saves array and postType is "post", "poles", or "youtubeUrl"
+    // ✅ Fetch all saved posts with specific post types
     const posts = await Post.find({
-      _id: { $in: savedPostIds }, // Match posts with savedPostIds
-      postType: { $in: ["post", "poles", "youtubeUrl"] }, // Only posts, poles, and youtubeUrl
+      _id: { $in: savedProfile.savedPostIds },
+      postType: { $in: ["post", "poles", "youtubeUrl"] },
     })
       .sort({ createdAt: -1 })
       .populate({
         path: "userData",
         select: "name profile",
-        populate: {
-          path: "profile",
-          select: "profilePhoto",
-        },
+        populate: { path: "profile", select: "profilePhoto" },
       })
       .populate({
-        path: "comments.userId", // Populate user profile from comment userId
+        path: "comments.userId",
         select: "name profile",
-        populate: {
-          path: "profile",
-          select: "profilePhoto",
-        },
+        populate: { path: "profile", select: "profilePhoto" },
       });
 
     // Map through each project post to add likeCount, saveCount, and commentUsers
@@ -1905,8 +1870,18 @@ export const getPopularUsers = async (req, res) => {
               if: {
                 $or: [
                   { $not: "$profileData.profilePhoto" },
-                  { $eq: [{ $size: { $ifNull: ["$profileData.skillSet", []] } }, 0] },
-                  { $eq: [{ $size: { $ifNull: ["$profileData.industries", []] } }, 0] },
+                  {
+                    $eq: [
+                      { $size: { $ifNull: ["$profileData.skillSet", []] } },
+                      0,
+                    ],
+                  },
+                  {
+                    $eq: [
+                      { $size: { $ifNull: ["$profileData.industries", []] } },
+                      0,
+                    ],
+                  },
                   { $eq: ["$profileData.priorStartupExperience", ""] },
                   { $eq: ["$profileData.commitmentLevel", ""] },
                   { $eq: ["$profileData.equityExpectation", ""] },
@@ -1923,7 +1898,7 @@ export const getPopularUsers = async (req, res) => {
       // ✅ Match only users with complete profiles
       {
         $match: {
-          "profileCompletionStatus": "complete",
+          profileCompletionStatus: "complete",
         },
       },
       {
@@ -1956,7 +1931,6 @@ export const getPopularUsers = async (req, res) => {
     });
   }
 };
-
 
 export const checkUserLikedPost = async (req, res) => {
   try {
