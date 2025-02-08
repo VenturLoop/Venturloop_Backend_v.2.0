@@ -145,24 +145,24 @@ export const acceptConnectionRequest = async (req, res) => {
       });
     }
 
-    // Update the UserModel's connections count for both sender and receiver
-    const sender = await UserModel.findById(senderId);
-    const receiver = await UserModel.findById(receiverId);
+      // Update the UserModel's connections count for both sender and receiver
+      const sender = await UserModel.findById(senderId);
+      const receiver = await UserModel.findById(receiverId);
 
-    if (!sender || !receiver) {
-      return res.status(404).json({
-        success: false,
-        message: "Sender or receiver not found.",
-      });
-    }
+      if (!sender || !receiver) {
+        return res.status(404).json({
+          success: false,
+          message: "Sender or receiver not found.",
+        });
+      }
 
-    // Increment the connections count for both users
-    sender.totalConnections += 1;
-    receiver.totalConnections += 1;
+      // Increment the connections count for both users
+      sender.totalConnections += 1;
+      receiver.totalConnections += 1;
 
-    // Save the updated user records
-    await sender.save();
-    await receiver.save();
+      // Save the updated user records
+      await sender.save();
+      await receiver.save();
 
     // Check if ConnectedUsers document exists for sender, create if not
     let senderConnections = await ConnectedUsers.findOne({ userId: senderId });

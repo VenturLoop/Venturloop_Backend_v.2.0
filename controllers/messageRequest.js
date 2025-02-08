@@ -100,6 +100,10 @@ export const acceptMessageRequest = async (req, res) => {
       });
     }
 
+    // ✅ Increment the connections count for both users
+    user.totalConnections = (user.totalConnections || 0) + 1;
+    owner.totalConnections = (owner.totalConnections || 0) + 1;
+
     // ✅ Ensure `ConnectedUsers` exists for both users
     let [userConnections, ownerConnections] = await Promise.all([
       ConnectedUsers.findOne({ userId }),
@@ -132,7 +136,13 @@ export const acceptMessageRequest = async (req, res) => {
         connectedAt: new Date(),
       });
 
-      await Promise.all([userConnections.save(), ownerConnections.save()]);
+      // ✅ Save updated user connections and user data
+      await Promise.all([
+        user.save(),
+        owner.save(),
+        userConnections.save(),
+        ownerConnections.save(),
+      ]);
     }
 
     await Message.create({
