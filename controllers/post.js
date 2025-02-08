@@ -1258,43 +1258,63 @@ export const deletePost = async (req, res) => {
 
 // Controller to save a post for a user
 export const savePost = async (req, res) => {
-  const { userId, postId } = req.params; // Get userId and postId from route parameters
+  const { userId, postId } = req.params;
 
   try {
-    // Find the post by postId
+    // ✅ Validate userId and postId
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(postId)
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user or post ID." });
+    }
+
+    // ✅ Find the post by postId
     const post = await Post.findById(postId);
-
     if (!post) {
-      return res.status(404).json({
-        success: false,
-        message: "Post not found.",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found." });
     }
 
-    // Check if user already saved the post
-    const isAlreadySaved = post.saves.includes(userId);
+    // ✅ Check if the post is already saved in `SavedProfile`
+    const savedProfile = await SavedProfile.findOne({ userId });
 
-    if (isAlreadySaved) {
-      return res.status(400).json({
-        success: false,
-        message: "Post is already saved by the user.",
-      });
+    if (savedProfile && savedProfile.savedPostIds.includes(postId)) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Post is already saved by the user.",
+        });
     }
 
-    // Add the userId to the saves array
-    post.saves.push(userId);
-    await post.save();
+    // ✅ Add postId to `savedPostIds` in `SavedProfile`
+    await SavedProfile.findOneAndUpdate(
+      { userId },
+      { $addToSet: { savedPostIds: postId }, updatedAt: new Date() }, // ✅ Prevents duplicates and updates timestamp
+      { upsert: true, new: true }
+    );
 
-    return res.status(200).json({
-      success: true,
-      message: "Post saved successfully.",
-    });
+    // ✅ Add userId to `saves` array in `Post`
+    if (!post.saves.includes(userId)) {
+      post.saves.push(userId);
+      await post.save();
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Post saved successfully." });
   } catch (error) {
     console.error("Error saving post:", error);
-    return res.status(500).json({
-      success: false,
-      message: "An error occurred while saving the post.",
-    });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "An error occurred while saving the post.",
+      });
   }
 };
 
