@@ -336,6 +336,7 @@ export const getPostDetails = async (req, res) => {
       commentsCount: post.commentsCount,
       userProfilePhoto: post.userData?.profile?.profilePhoto, // Adding profile photo
       likesCount: post.likes?.count || 0,
+      savesCount: post.savesCount,
       commentUser: firstThreeUniqueComments,
     };
 
