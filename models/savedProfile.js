@@ -25,6 +25,8 @@ const SavedProfileSchema = new mongoose.Schema(
         ref: "Post",
       },
     ],
+    visitedInvestorPages: [{ type: Number }], // ✅ Store visited investor pages
+    visitedCofounderPages: [{ type: Number }], // ✅ Store visited co-founder pages
     savedAt: {
       type: Date,
       default: Date.now,

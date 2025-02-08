@@ -6,26 +6,20 @@ import ReportModel from "../models/report.js";
 import mongoose from "mongoose";
 
 // Controller to get users feed
+// Controller to get users feed
 export const getCofoundersFeed = async (req, res) => {
   try {
     const { userId } = req.params;
-    let { cursor, limit = 6 } = req.query; // Cursor-based pagination
+    let { limit = 10 } = req.query;
+    limit = parseInt(limit);
 
-    // ✅ Validate userId before querying
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid userId provided",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid userId provided" });
     }
 
-    // ✅ Validate cursor before using it in query
-    let cursorFilter = {};
-    if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
-      cursorFilter._id = { $gt: new mongoose.Types.ObjectId(cursor) };
-    }
-
-    // Get blocked and reported users
+    // ✅ Fetch blocked and reported users
     const blockedUserIds = await BlockModel.find({ blocker: userId }).distinct(
       "blocked"
     );
@@ -34,84 +28,85 @@ export const getCofoundersFeed = async (req, res) => {
     }).distinct("reported");
     const excludedUserIds = [...blockedUserIds, ...reportedUserIds, userId];
 
-    const users = await UserModel.aggregate([
-      {
-        $match: {
-          isVerified: true,
-          isDeleted: false,
-          _id: { $nin: excludedUserIds }, // Exclude blocked, swiped, or reported users
-        },
-      },
-      { $sample: { size: parseInt(limit) } }, // Get random users
-      {
-        $lookup: {
-          from: "userprofiles", // ✅ Ensure this matches your actual MongoDB collection name
-          localField: "profile",
-          foreignField: "_id",
-          as: "profile",
-        },
-      },
-      { $unwind: { path: "$profile", preserveNullAndEmptyArrays: false } }, // ✅ Ensures users without profiles are removed
-      {
-        $match: {
-          "profile.status": { $exists: true, $ne: null },
-          "profile.profilePhoto": { $exists: true, $ne: null },
-          "profile.birthday": { $exists: true, $ne: null },
-          "profile.bio": { $exists: true, $ne: null },
-          "profile.location": { $exists: true, $ne: null },
-          "profile.skillSet": { $exists: true, $ne: [] },
-          "profile.industries": { $exists: true, $ne: [] },
-          "profile.priorStartupExperience": { $exists: true, $ne: null },
-          "profile.commitmentLevel": { $exists: true, $ne: null },
-          "profile.equityExpectation": { $exists: true, $ne: null },
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          email: 1,
-          isVerified: 1,
-          isDeleted: 1,
-          totalConnections: 1,
-          pushToken: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          "profile._id": 1,
-          "profile.birthday": 1,
-          "profile.location": 1,
-          "profile.skillSet": 1,
-          "profile.industries": 1,
-          "profile.commitmentLevel": 1,
-          "profile.equityExpectation": 1,
-          "profile.priorStartupExperience": 1,
-          "profile.status": 1,
-          "profile.profilePhoto": 1,
-          "profile.bio": 1,
-          "profile.instagramLink": 1,
-          "profile.linkedInLink": 1,
-          "profile.xLink": 1,
-        },
-      },
-    ]);
+    // ✅ Fetch total count of co-founders
+    const totalCofounders = await UserModel.countDocuments({
+      isVerified: true,
+      isDeleted: false,
+      _id: { $nin: excludedUserIds },
+    });
 
-    // Filter users who have a profile
-    const filteredUsers = users.filter((user) => user.profile);
+    // ✅ Fetch the user's visited pages
+    let savedProfile = await SavedProfile.findOne({ userId });
 
-    // Determine next cursor
-    const nextCursor = users.length > limit ? users[limit]._id : null;
+    // ✅ If no saved profile, create an empty one
+    if (!savedProfile) {
+      savedProfile = await SavedProfile.create({
+        userId,
+        visitedCofounderPages: [],
+      });
+    }
+
+    let visitedPages = savedProfile.visitedCofounderPages || [];
+
+    // ✅ Find the next available page
+    let currentPage;
+    if (visitedPages.length >= Math.ceil(totalCofounders / limit)) {
+      // If all pages are visited, **cycle**: Remove the first page and re-add it at the end
+      currentPage = visitedPages.shift(); // Remove first page
+      visitedPages.push(currentPage); // Add it back at the end
+    } else {
+      // Otherwise, find the next page number
+      currentPage = visitedPages.length + 1;
+      visitedPages.push(currentPage); // Mark as visited
+    }
+
+    // ✅ Fetch paginated co-founders
+    const users = await UserModel.find({
+      isVerified: true,
+      isDeleted: false,
+      _id: { $nin: excludedUserIds },
+    })
+      .sort({ _id: -1 }) // Ensures correct ordering
+      .skip((currentPage - 1) * limit)
+      .limit(limit)
+      .populate({
+        path: "profile",
+        match: {
+          status: { $exists: true, $ne: null },
+          profilePhoto: { $exists: true, $ne: null },
+          birthday: { $exists: true, $ne: null },
+          bio: { $exists: true, $ne: null },
+          location: { $exists: true, $ne: null },
+          skillSet: { $exists: true, $ne: [] },
+          industries: { $exists: true, $ne: [] },
+          priorStartupExperience: { $exists: true, $ne: null },
+          commitmentLevel: { $exists: true, $ne: null },
+          equityExpectation: { $exists: true, $ne: null },
+        },
+      });
+
+    // ✅ Save updated visited pages
+    await SavedProfile.findOneAndUpdate(
+      { userId },
+      { visitedCofounderPages: visitedPages },
+      { upsert: true, new: true }
+    );
 
     return res.status(200).json({
       success: true,
-      message: "Verified users with complete profiles fetched successfully.",
-      data: filteredUsers.slice(0, limit),
-      nextCursor,
+      message: "Cofounders feed fetched successfully.",
+      data: users.filter((user) => user.profile), // Ensure only users with profiles are included
+      currentPage,
+      nextPage:
+        currentPage + 1 <= Math.ceil(totalCofounders / limit)
+          ? currentPage + 1
+          : 1, // Reset when all pages are visited
     });
   } catch (error) {
-    console.error("Error fetching users feed:", error);
+    console.error("Error fetching cofounders feed:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to retrieve users feed",
+      message: "Failed to retrieve cofounders feed",
     });
   }
 };

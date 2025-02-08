@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import Investor from "../models/investor.js";
+import SavedProfile from "../models/savedProfile.js";
 
 export const uploadInvestorProfile = async (req, res) => {
   try {
@@ -122,25 +124,67 @@ export const getInvestorProfile = async (req, res) => {
 // controllers/investorController.js
 export const getAllInvestors = async (req, res) => {
   try {
-    const { page = 1 } = req.query; // Get page number from query, default is 1
-    const limit = 12; // Limit 12 investors per request
-    const skip = (page - 1) * limit; // Calculate skip value
+    const { userId } = req.params;
+    let { limit = 10 } = req.query;
+    limit = parseInt(limit);
 
-    // Fetch 12 investors with pagination
-    const investors = await Investor.find().skip(skip).limit(limit);
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid userId provided" });
+    }
 
-    if (!investors || investors.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No investors found",
+    // ✅ Fetch total investors count
+    const totalInvestors = await Investor.countDocuments();
+
+    // ✅ Fetch user's visited pages
+    let savedProfile = await SavedProfile.findOne({ userId });
+
+    // ✅ If no saved profile, create an empty one
+    if (!savedProfile) {
+      savedProfile = await SavedProfile.create({
+        userId,
+        visitedInvestorPages: [],
       });
     }
- 
+
+    let visitedPages = savedProfile.visitedInvestorPages || [];
+
+    // ✅ Find the next available page
+    let currentPage;
+    if (visitedPages.length >= Math.ceil(totalInvestors / limit)) {
+      // If all pages are visited, **cycle**: Remove the first page and re-add it at the end
+      currentPage = visitedPages.shift(); // Remove first page
+      visitedPages.push(currentPage); // Add it back at the end
+    } else {
+      // Otherwise, find the next page number
+      currentPage = visitedPages.length + 1;
+      visitedPages.push(currentPage); // Mark as visited
+    }
+
+    // ✅ Fetch random investors for the current page
+    const investors = await Investor.aggregate([
+      { $sample: { size: totalInvestors } }, // Fetch all investors in random order
+      { $skip: (currentPage - 1) * limit }, // Skip previously fetched items
+      { $limit: limit }, // Fetch only required limit
+    ]);
+
+    // ✅ Update user's visited pages in the database
+    await SavedProfile.findOneAndUpdate(
+      { userId },
+      { visitedInvestorPages: visitedPages },
+      { upsert: true, new: true }
+    );
+
     return res.status(200).json({
       success: true,
-      message: "Investors fetched successfully.",
+      message: "New random investors fetched successfully.",
       data: investors,
-      hasMore: investors.length === limit, // Check if more investors are available
+      currentPage,
+      nextPage:
+        currentPage + 1 <= Math.ceil(totalInvestors / limit)
+          ? currentPage + 1
+          : 1, // Reset when all pages are visited
     });
   } catch (error) {
     console.error("Error fetching investors:", error);

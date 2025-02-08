@@ -17,7 +17,7 @@ router.post("/create-investor", uploadInvestorProfile);
 
 router.get("/get-investor/:id", getInvestorProfile);
 
-router.get("/get-investors", getAllInvestors);
+router.get("/get-investors/:userId", getAllInvestors);
 
 router.get("/get-investors-from-admin", getAllInvestorsForAdmin);
 
