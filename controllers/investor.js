@@ -427,7 +427,7 @@ export const filterInvestors = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Filtered investors retrieved successfully.",
-      investors: sortedResults,
+      data: sortedResults,
     });
   } catch (error) {
     console.error("Error filtering investors:", error);
