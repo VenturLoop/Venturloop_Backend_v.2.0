@@ -6,7 +6,6 @@ import ReportModel from "../models/report.js";
 import mongoose from "mongoose";
 
 // Controller to get users feed
-// Controller to get users feed
 export const getCofoundersFeed = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -28,17 +27,24 @@ export const getCofoundersFeed = async (req, res) => {
     }).distinct("reported");
     const excludedUserIds = [...blockedUserIds, ...reportedUserIds, userId];
 
-    // ✅ Fetch total count of co-founders
+    // ✅ Get total count of available co-founders
     const totalCofounders = await UserModel.countDocuments({
       isVerified: true,
       isDeleted: false,
       _id: { $nin: excludedUserIds },
     });
 
-    // ✅ Fetch the user's visited pages
+    // ✅ Calculate total pages
+    const totalPages = Math.ceil(totalCofounders / limit);
+    if (totalPages === 0) {
+      return res
+        .status(200)
+        .json({ success: true, message: "No cofounders available.", data: [] });
+    }
+
+    // ✅ Fetch or create the user's saved profile
     let savedProfile = await SavedProfile.findOne({ userId });
 
-    // ✅ If no saved profile, create an empty one
     if (!savedProfile) {
       savedProfile = await SavedProfile.create({
         userId,
@@ -48,16 +54,16 @@ export const getCofoundersFeed = async (req, res) => {
 
     let visitedPages = savedProfile.visitedCofounderPages || [];
 
-    // ✅ Find the next available page
+    // ✅ Determine the next page
     let currentPage;
-    if (visitedPages.length >= Math.ceil(totalCofounders / limit)) {
-      // If all pages are visited, **cycle**: Remove the first page and re-add it at the end
-      currentPage = visitedPages.shift(); // Remove first page
-      visitedPages.push(currentPage); // Add it back at the end
+    if (visitedPages.length >= totalPages) {
+      // All pages visited → Remove first page and reuse it at the end
+      currentPage = visitedPages.shift();
+      visitedPages.push(currentPage);
     } else {
-      // Otherwise, find the next page number
+      // Otherwise, get the next unvisited page
       currentPage = visitedPages.length + 1;
-      visitedPages.push(currentPage); // Mark as visited
+      visitedPages.push(currentPage);
     }
 
     // ✅ Fetch paginated co-founders
@@ -66,7 +72,7 @@ export const getCofoundersFeed = async (req, res) => {
       isDeleted: false,
       _id: { $nin: excludedUserIds },
     })
-      .sort({ _id: -1 }) // Ensures correct ordering
+      .sort({ _id: -1 }) // Ensures latest users first
       .skip((currentPage - 1) * limit)
       .limit(limit)
       .populate({
@@ -97,10 +103,7 @@ export const getCofoundersFeed = async (req, res) => {
       message: "Cofounders feed fetched successfully.",
       data: users.filter((user) => user.profile), // Ensure only users with profiles are included
       currentPage,
-      nextPage:
-        currentPage + 1 <= Math.ceil(totalCofounders / limit)
-          ? currentPage + 1
-          : 1, // Reset when all pages are visited
+      nextPage: visitedPages[0], // Next page in the cycle
     });
   } catch (error) {
     console.error("Error fetching cofounders feed:", error);
