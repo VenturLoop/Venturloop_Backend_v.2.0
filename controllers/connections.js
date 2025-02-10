@@ -466,28 +466,25 @@ export const checkConnectionStatus = async (req, res) => {
       });
     }
 
-    // Check if a connection exists between the two users
-    const connection = await ConnectedUsers.findOne({
-      $or: [
-        { sender: senderId, receiver: receiverId },
-        { sender: receiverId, receiver: senderId },
-      ],
-    });
+    // Find the user in the ConnectedUsers collection
+    const user = await ConnectedUsers.findOne({ userId: senderId });
 
-    // If no connection exists
-    if (!connection) {
+    if (!user || !user.connections) {
       return res.status(200).json({
         success: true,
-        isConnected: false,
-        status: null,
+        isConnected: false, // ✅ Ensuring Boolean format
       });
     }
+
+    // ✅ Check if receiverId is in the user's connections array
+    const isConnected = user.connections.some(
+      (connection) => connection.user.toString() === receiverId
+    );
 
     // If a connection exists, return its status
     return res.status(200).json({
       success: true,
-      isConnected: true,
-      status: connection.status,
+      isConnected: Boolean(isConnected), // ✅ Always returns `true` or `false`
     });
   } catch (error) {
     console.error("Error checking connection status:", error);
