@@ -199,6 +199,7 @@ export const updateUserProfileDetails = async (req, res) => {
       success: true,
       message: "User profile updated successfully.",
       profile: userProfile,
+      currentUser:user
     });
   } catch (error) {
     console.error("Error updating user profile details:", error);
