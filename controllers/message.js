@@ -261,7 +261,6 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
       },
     });
 
-    // ✅ Check if connectedUsers exists
     if (!connectedUsers || !connectedUsers.connections.length) {
       return res.status(200).json({
         success: true,
@@ -282,7 +281,7 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
       });
     }
 
-    // ✅ Fetch latest messages for each connected user
+    // ✅ Fetch only users who have messages exchanged
     const messages = await Message.aggregate([
       {
         $match: {
@@ -306,27 +305,37 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
       {
         $group: {
           _id: {
-            senderId: "$senderId",
-            recipientId: "$recipientId",
+            user1: {
+              $cond: [
+                { $lt: ["$senderId", "$recipientId"] },
+                "$senderId",
+                "$recipientId",
+              ],
+            },
+            user2: {
+              $cond: [
+                { $lt: ["$senderId", "$recipientId"] },
+                "$recipientId",
+                "$senderId",
+              ],
+            },
           },
-          latestMessage: { $first: "$$ROOT" }, // ✅ Pick the latest message per user
+          latestMessage: { $first: "$$ROOT" }, // ✅ Ensures we pick the latest message
         },
       },
     ]);
 
-    // ✅ Map messages to users and sort by latest message timestamp
-    const usersWithMessages = connectedUsers.connections
-      .map((connection) => {
-        if (!connection.user) return null; // Prevents errors if connection.user is missing
-
-        const latestMessage = messages.find(
-          (msg) =>
-            (msg._id.senderId.toString() === userId &&
-              msg._id.recipientId.toString() ===
-                connection.user._id.toString()) ||
-            (msg._id.recipientId.toString() === userId &&
-              msg._id.senderId.toString() === connection.user._id.toString())
+    // ✅ Filter only users who have messages
+    const usersWithMessages = messages
+      .map((msg) => {
+        const otherUserId =
+          msg._id.user1.toString() === userId ? msg._id.user2 : msg._id.user1;
+        const connection = connectedUsers.connections.find(
+          (conn) =>
+            conn.user && conn.user._id.toString() === otherUserId.toString()
         );
+
+        if (!connection || !connection.user) return null;
 
         return {
           user: {
@@ -334,10 +343,8 @@ export const getConnectedUsersWithMessagesinMessageTab = async (req, res) => {
             name: connection.user.name,
             profilePhoto: connection.user.profile?.profilePhoto || "",
           },
-          latestMessage: latestMessage ? latestMessage.latestMessage : null,
-          latestMessageTime: latestMessage
-            ? latestMessage.latestMessage.timestamp
-            : new Date(0), // Use old date if no messages
+          latestMessage: msg.latestMessage,
+          latestMessageTime: msg.latestMessage.timestamp,
         };
       })
       .filter(Boolean) // Remove null values
